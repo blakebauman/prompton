@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
-import { BookOpen, Code2 } from "lucide-react";
+import { BookOpen, Code2, KeyRound, Server, Sparkles } from "lucide-react";
 
+import { ActionNotice } from "@/components/action-notice";
 import { useArtifact } from "@/components/artifact/artifact-context";
+import { CopyableSnippet } from "@/components/copyable-snippet";
 import { LinkTile } from "@/components/link-tile";
 import { SettingRow, SettingSection } from "@/components/setting-row";
+import { SettingsHelpAside } from "@/components/settings-help-aside";
 import { UnderlineTab, UnderlineTabs } from "@/components/underline-tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -133,100 +136,142 @@ export function SettingsPanel() {
       )}
 
       {tab === "provider" && (
-        <SettingSection
-          title="Model provider"
-          description="Local Ollama by default. API keys stay in the OS keyring."
-        >
-          <SettingRow
-            title="Provider"
-            action={
-              <Select
-                value={kind}
-                onValueChange={(v) => setKind(v as ProviderKind)}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ollama">Ollama (local)</SelectItem>
-                  <SelectItem value="openaiCompatible">
-                    OpenAI-compatible
-                  </SelectItem>
-                  <SelectItem value="anthropic">Anthropic</SelectItem>
-                </SelectContent>
-              </Select>
-            }
-          />
-          <SettingRow title="Model">
-            {kind === "ollama" && ollamaModels.length > 0 ? (
-              <Select value={model} onValueChange={setModel}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a local model" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ollamaModels.map((m) => (
-                    <SelectItem key={m.name} value={m.name}>
-                      {m.name}
-                      {m.supportsTools ? " · tools" : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input
-                className="h-8"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
+        <div className="flex items-start gap-8">
+          <div className="min-w-0 flex-1 space-y-4">
+            {kind === "ollama" && ollamaModels.length === 0 && (
+              <ActionNotice
+                tone="warning"
+                title="No Ollama models detected"
+                description="Start the local server, then pull a tool-capable model. Prompton refreshes the list when the base URL changes."
               />
             )}
-            {kind === "ollama" && ollamaModels.length === 0 && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                No Ollama models detected. Run `ollama serve` and pull a model
-                (e.g. `ollama pull qwen2.5-coder:14b`).
-              </p>
-            )}
-          </SettingRow>
-          <SettingRow title="Base URL">
-            <Input
-              className="h-8"
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-            />
-          </SettingRow>
-          <SettingRow
-            title="API key"
-            description="Leave blank to keep the existing keyring value."
-          >
-            <Input
-              className="h-8"
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="••••••••"
-            />
-          </SettingRow>
-          <div className="py-3">
-            <Button
-              onClick={() =>
-                void (async () => {
-                  await api.agentSetSettings(
-                    {
-                      provider: {
-                        kind,
-                        model,
-                        baseUrl: baseUrl || null,
-                      },
-                    },
-                    apiKey || undefined,
-                  );
-                  setStatus("Agent settings saved");
-                })()
-              }
+            <SettingSection
+              title="Model provider"
+              description="Local Ollama by default. API keys stay in the OS keyring."
             >
-              Save provider
-            </Button>
+              <SettingRow
+                title="Provider"
+                action={
+                  <Select
+                    value={kind}
+                    onValueChange={(v) => setKind(v as ProviderKind)}
+                  >
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ollama">Ollama (local)</SelectItem>
+                      <SelectItem value="openaiCompatible">
+                        OpenAI-compatible
+                      </SelectItem>
+                      <SelectItem value="anthropic">Anthropic</SelectItem>
+                    </SelectContent>
+                  </Select>
+                }
+              />
+              <SettingRow title="Model">
+                {kind === "ollama" && ollamaModels.length > 0 ? (
+                  <Select value={model} onValueChange={setModel}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a local model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ollamaModels.map((m) => (
+                        <SelectItem key={m.name} value={m.name}>
+                          {m.name}
+                          {m.supportsTools ? " · tools" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    className="h-8"
+                    value={model}
+                    onChange={(e) => setModel(e.target.value)}
+                  />
+                )}
+              </SettingRow>
+              <SettingRow title="Base URL">
+                <Input
+                  className="h-8"
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                />
+              </SettingRow>
+              <SettingRow
+                title="API key"
+                description="Leave blank to keep the existing keyring value."
+              >
+                <Input
+                  className="h-8"
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="••••••••"
+                />
+              </SettingRow>
+              <div className="py-3">
+                <Button
+                  onClick={() =>
+                    void (async () => {
+                      await api.agentSetSettings(
+                        {
+                          provider: {
+                            kind,
+                            model,
+                            baseUrl: baseUrl || null,
+                          },
+                        },
+                        apiKey || undefined,
+                      );
+                      setStatus("Agent settings saved");
+                    })()
+                  }
+                >
+                  Save provider
+                </Button>
+              </div>
+            </SettingSection>
+            {kind === "ollama" && (
+              <SettingSection title="Quick start">
+                <CopyableSnippet
+                  title="Pull a model"
+                  description="Tool-capable coder models work best with Prompton."
+                  snippet="ollama pull qwen2.5-coder:14b"
+                />
+                {baseUrl.trim() && (
+                  <CopyableSnippet
+                    title="Base URL"
+                    description="OpenAI-compatible endpoint Prompton will call."
+                    snippet={baseUrl.trim()}
+                  />
+                )}
+              </SettingSection>
+            )}
           </div>
-        </SettingSection>
+          <SettingsHelpAside
+            title="About providers"
+            body="Prompton talks to local or remote chat APIs. Schema tools need a model that supports function calling."
+            tips={[
+              {
+                title: "Local first",
+                body: "Ollama keeps data on your machine and needs no API key.",
+                icon: <Server className="size-3.5" />,
+              },
+              {
+                title: "Keys in keyring",
+                body: "Remote keys are stored by the OS, not in project files.",
+                icon: <KeyRound className="size-3.5" />,
+              },
+              {
+                title: "Tools matter",
+                body: "Prefer models marked with tools for schema and query actions.",
+                icon: <Sparkles className="size-3.5" />,
+              },
+            ]}
+          />
+        </div>
       )}
 
       {tab === "skills" && (
@@ -323,41 +368,61 @@ export function SettingsPanel() {
       )}
 
       {tab === "about" && (
-        <div className="space-y-5">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <LinkTile
-              href="https://prompton.dev"
-              title="Documentation"
-              subtitle="prompton.dev"
-              icon={BookOpen}
-            />
-            <LinkTile
-              href="https://github.com/blakebauman/prompton"
-              title="GitHub"
-              subtitle="blakebauman/prompton"
-              icon={Code2}
-            />
-          </div>
-          <SettingSection
-            title="Agent context"
-            description={
-              contextReport
-                ? `Last context: ${contextReport.totalChars} chars${contextReport.truncated ? ", truncated" : ""}.`
-                : "No context captured yet."
-            }
-          >
-            <div className="py-2">
-              <Button
-                variant="secondary"
-                onClick={() => openArtifact("context")}
-              >
-                Open Context artifact
-              </Button>
+        <div className="flex items-start gap-8">
+          <div className="min-w-0 flex-1 space-y-5">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <LinkTile
+                href="https://prompton.dev"
+                title="Documentation"
+                subtitle="prompton.dev"
+                icon={BookOpen}
+              />
+              <LinkTile
+                href="https://github.com/blakebauman/prompton"
+                title="GitHub"
+                subtitle="blakebauman/prompton"
+                icon={Code2}
+              />
             </div>
-          </SettingSection>
-          <p className="text-xs text-muted-foreground">
-            Prompton v0.1 — native agentic database client.
-          </p>
+            <SettingSection
+              title="Agent context"
+              description={
+                contextReport
+                  ? `Last context: ${contextReport.totalChars} chars${contextReport.truncated ? ", truncated" : ""}.`
+                  : "No context captured yet."
+              }
+            >
+              <div className="py-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => openArtifact("context")}
+                >
+                  Open Context artifact
+                </Button>
+              </div>
+            </SettingSection>
+            <SettingSection title="Version">
+              <CopyableSnippet
+                title="Prompton"
+                description="Native agentic database client."
+                snippet="prompton 0.1.0"
+              />
+            </SettingSection>
+          </div>
+          <SettingsHelpAside
+            title="About Prompton"
+            body="Inspect schema, run SQL, and ask an agent — with production writes gated until you approve."
+            tips={[
+              {
+                title: "Context is inspectable",
+                body: "Open the Context artifact after a chat turn to see what was sent.",
+              },
+              {
+                title: "Production stays locked",
+                body: "Mutations on production connections pause for human approval.",
+              },
+            ]}
+          />
         </div>
       )}
     </div>

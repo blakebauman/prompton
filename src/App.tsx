@@ -168,7 +168,9 @@ function AppShell() {
                   defaultSize={artifact.open ? "38" : "82"}
                   minSize="28"
                 >
-                  <ChatPanel />
+                  <ChatPanel
+                    onOpenSettings={() => setActivity("settings")}
+                  />
                 </ResizablePanel>
                 {artifact.open && (
                   <>
@@ -193,14 +195,14 @@ function AppShell() {
               <div className="relative h-full overflow-hidden">
                 <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-16 bg-gradient-to-b from-background to-transparent" />
                 <div className="absolute inset-x-0 top-0 z-20 px-6 pt-5">
-                  <div className="mx-auto max-w-2xl">
+                  <div className="mx-auto max-w-4xl">
                     <h1 className="text-2xl font-bold tracking-tight">
                       Settings
                     </h1>
                   </div>
                 </div>
                 <div className="h-full overflow-y-auto">
-                  <div className="mx-auto max-w-2xl px-6 pt-16 pb-10">
+                  <div className="mx-auto max-w-4xl px-6 pt-16 pb-10">
                     <SettingsPanel />
                   </div>
                 </div>

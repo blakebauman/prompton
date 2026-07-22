@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { DatabaseIcon, SquareIcon } from "lucide-react";
+import {
+  DatabaseIcon,
+  Lock,
+  Server,
+  Settings2,
+  SquareIcon,
+} from "lucide-react";
 
 import {
   Conversation,
@@ -29,11 +35,13 @@ import {
   ToolOutput,
   type ToolState,
 } from "@/components/ai-elements/tool";
+import { ActionNotice } from "@/components/action-notice";
 import { ActivityPulse } from "@/components/activity-pulse";
 import { useArtifact } from "@/components/artifact/artifact-context";
+import { SetupChecklist } from "@/components/setup-checklist";
 import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { Button } from "@/components/ui/button";
-import { isCurrentAgentSession } from "@/lib/session";
+import { abandonConnectionWork, isCurrentAgentSession } from "@/lib/session";
 import { api, onEvent } from "@/lib/tauri";
 import type { ChatMessage, PendingConfirmation, QueryPage } from "@/lib/types";
 import { useWorkspace } from "@/stores/workspace";
@@ -44,7 +52,11 @@ const SUGGESTIONS = [
   "Write a safe SELECT with a LIMIT",
 ];
 
-export function ChatPanel() {
+export function ChatPanel({
+  onOpenSettings,
+}: {
+  onOpenSettings?: () => void;
+} = {}) {
   const {
     messages,
     addMessage,
@@ -61,10 +73,32 @@ export function ChatPanel() {
     setContextReport,
     setStatus,
     setSql,
+    setConnections,
+    setActiveConnId,
+    setSchemas,
   } = useWorkspace();
   const { open: openArtifact } = useArtifact();
   const [input, setInput] = useState("");
   const active = connections.find((c) => c.id === activeConnId);
+
+  async function connectDemo() {
+    try {
+      setStatus("Seeding demo database…");
+      const [info, page] = await api.openDemoSqlite();
+      setConnections(await api.listConnections());
+      await abandonConnectionWork();
+      setActiveConnId(info.id);
+      setSchemas(await api.listSchemas(info.id));
+      setSql(
+        "SELECT id, user_id, status, total_cents, placed_at FROM orders ORDER BY id;",
+      );
+      setResult(page);
+      openArtifact("results");
+      setStatus(`Demo ready · ${page.totalRows.toLocaleString()} orders`);
+    } catch (e) {
+      setStatus(String(e));
+    }
+  }
 
   useEffect(() => {
     const unsubs: Array<() => void> = [];
@@ -292,11 +326,50 @@ export function ChatPanel() {
       <Conversation className="min-h-0">
         <ConversationContent className="gap-3 px-4 pt-1 pb-4">
           {!activeConnId ? (
-            <ConversationEmptyState
-              icon={<DatabaseIcon className="size-7 opacity-40" />}
-              title="Connect a database"
-              description="Add Postgres or SQLite, then ask Prompton about your data."
-            />
+            <div className="flex flex-1 items-center justify-center px-2 py-6">
+              <SetupChecklist
+                title="Get ready to chat"
+                description="Connect a database, then ask in natural language or SQL."
+                items={[
+                  {
+                    id: "database",
+                    title: "Connect a database",
+                    description:
+                      "Add Postgres or SQLite in Connections, or open the seeded demo.",
+                    ready: false,
+                    icon: <DatabaseIcon className="size-3.5" />,
+                    action: (
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => void connectDemo()}
+                        >
+                          Open demo SQLite
+                        </Button>
+                      </div>
+                    ),
+                  },
+                  {
+                    id: "provider",
+                    title: "Configure a model provider",
+                    description:
+                      "Local Ollama by default. Open Settings if you need a remote API.",
+                    ready: false,
+                    icon: <Server className="size-3.5" />,
+                    action: onOpenSettings ? (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={onOpenSettings}
+                      >
+                        <Settings2 className="size-3.5" />
+                        Open Settings
+                      </Button>
+                    ) : undefined,
+                  },
+                ]}
+              />
+            </div>
           ) : showEmpty ? (
             <ConversationEmptyState
               icon={<DatabaseIcon className="size-7 opacity-40" />}
@@ -319,9 +392,13 @@ export function ChatPanel() {
 
       <div className="space-y-2 border-t border-border/60 p-2.5">
         {active?.isProduction && !active.adminWritesUnlocked && (
-          <div className="rounded-md border border-prod/25 bg-prod-muted px-2.5 py-1.5 text-[11px] leading-snug text-prod text-pretty">
-            Production is read-only. Mutations pause for approval.
-          </div>
+          <ActionNotice
+            tone="prod"
+            className="px-2.5 py-2"
+            icon={<Lock className="size-3.5" />}
+            title="Production is read-only"
+            description="Mutations pause for approval until you unlock admin writes."
+          />
         )}
         {activeConnId && showEmpty && (
           <Suggestions className="px-0.5">
