@@ -1,4 +1,11 @@
-import type { CSSProperties, ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+  type UIEvent,
+} from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -25,7 +32,6 @@ export function ListPane({
             "linear-gradient(to bottom, transparent 0, black 48px)",
         }}
       />
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-16 bg-gradient-to-b from-background to-transparent" />
       {children}
     </div>
   );
@@ -39,7 +45,23 @@ export function ListPaneHeader({
   children: ReactNode;
 }) {
   return (
-    <div className={cn("relative z-20 shrink-0 px-3 pt-3 pb-2", className)}>
+    <div
+      className={cn("absolute inset-x-0 top-0 z-20 px-3 pt-3", className)}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function ListPaneTitleRow({
+  className,
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={cn("mb-2 flex items-center gap-2", className)}>
       {children}
     </div>
   );
@@ -59,6 +81,20 @@ export function ListPaneTitle({
   );
 }
 
+export function ListPaneActions({
+  className,
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={cn("ml-auto flex shrink-0 items-center gap-0.5", className)}>
+      {children}
+    </div>
+  );
+}
+
 export function ListPaneScroll({
   className,
   style,
@@ -68,15 +104,38 @@ export function ListPaneScroll({
   style?: CSSProperties;
   children: ReactNode;
 }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    setScrolled(el.scrollTop > 0);
+  }, [children]);
+
+  function onScroll(e: UIEvent<HTMLDivElement>) {
+    setScrolled(e.currentTarget.scrollTop > 0);
+  }
+
   return (
-    <div
-      className={cn(
-        "min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-3",
-        className,
-      )}
-      style={style}
-    >
-      {children}
-    </div>
+    <>
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-x-0 top-0 z-10 h-20 bg-gradient-to-b from-background to-transparent transition-opacity duration-200",
+          scrolled ? "opacity-100" : "opacity-0",
+        )}
+      />
+      <div
+        ref={ref}
+        className={cn(
+          "relative z-0 min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pt-20 pb-3",
+          className,
+        )}
+        style={style}
+        onScroll={onScroll}
+      >
+        {children}
+      </div>
+    </>
   );
 }

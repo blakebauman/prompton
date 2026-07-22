@@ -4,9 +4,11 @@ import { BookMarked, FileText, Plus, Sparkles } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import {
   ListPane,
+  ListPaneActions,
   ListPaneHeader,
   ListPaneScroll,
   ListPaneTitle,
+  ListPaneTitleRow,
 } from "@/components/list-pane";
 import { Button } from "@/components/ui/button";
 import {
@@ -180,19 +182,21 @@ export function LibraryPanel({
       <div className="w-[320px] shrink-0">
         <ListPane>
           <ListPaneHeader>
-            <div className="mb-3 flex items-center justify-between gap-2">
+            <ListPaneTitleRow className="mb-2">
               <ListPaneTitle>Library</ListPaneTitle>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 px-2"
-                onClick={openCreate}
-                aria-label={tab === "skills" ? "New skill" : "New prompt"}
-              >
-                <Plus className="size-3.5" />
-                New
-              </Button>
-            </div>
+              <ListPaneActions>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2"
+                  onClick={openCreate}
+                  aria-label={tab === "skills" ? "New skill" : "New prompt"}
+                >
+                  <Plus className="size-3.5" />
+                  New
+                </Button>
+              </ListPaneActions>
+            </ListPaneTitleRow>
             <div className="flex gap-1 border-b border-border/60">
               {(
                 [
@@ -208,7 +212,7 @@ export function LibraryPanel({
                     "-mb-px border-b-2 px-3 py-2 text-xs font-medium transition-colors",
                     tab === t.id
                       ? "border-foreground text-foreground"
-                      : "border-transparent text-muted-foreground hover:text-foreground",
+                      : "border-transparent text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground",
                   )}
                 >
                   {t.label}
@@ -217,7 +221,7 @@ export function LibraryPanel({
             </div>
           </ListPaneHeader>
 
-          <ListPaneScroll>
+          <ListPaneScroll className="pt-28">
             <div className="space-y-1 px-1">
               {empty && (
                 <EmptyState

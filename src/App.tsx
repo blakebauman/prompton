@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/components/artifact/artifact-context";
 import { ArtifactPane } from "@/components/artifact/artifact-pane";
 import { ProdBadge } from "@/components/prod-badge";
+import { StatusPill, statusTone } from "@/components/status-pill";
 import { TitleBarDragRegion } from "@/components/titlebar-drag-region";
 import {
   ResizableHandle,
@@ -19,10 +20,7 @@ import {
 } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
 import {
-  Tooltip,
-  TooltipContent,
   TooltipProvider,
-  TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ChatPanel } from "@/features/chat/ChatPanel";
 import { ConnectionsPanel } from "@/features/connections/ConnectionsPanel";
@@ -45,10 +43,19 @@ export default function App() {
 }
 
 function AppShell() {
-  const { status, connections, activeConnId } = useWorkspace();
+  const {
+    status,
+    setStatus,
+    connections,
+    activeConnId,
+    agentBusy,
+    running,
+  } = useWorkspace();
   const { state: artifact, toggle } = useArtifact();
   const active = connections.find((c) => c.id === activeConnId);
   const [activity, setActivity] = useState<ActivityId>("workspace");
+  const busy = agentBusy || running;
+  const tone = statusTone(status, busy);
   const showStatus =
     !!status &&
     status !== "Ready" &&
@@ -56,6 +63,12 @@ function AppShell() {
     !/Cannot read properties of undefined \(reading ['"]invoke['"]\)/i.test(
       status,
     );
+
+  useEffect(() => {
+    if (!showStatus || busy || tone === "error") return;
+    const t = window.setTimeout(() => setStatus("Ready"), 4200);
+    return () => window.clearTimeout(t);
+  }, [showStatus, busy, tone, status, setStatus]);
 
   return (
     <div
@@ -96,18 +109,14 @@ function AppShell() {
                 </>
               )}
             </div>
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1.5">
               {showStatus && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="mr-1 max-w-50 truncate text-xs text-muted-foreground">
-                      {status}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="max-w-sm">
-                    {status}
-                  </TooltipContent>
-                </Tooltip>
+                <StatusPill
+                  label={status}
+                  tone={tone}
+                  onDismiss={() => setStatus("Ready")}
+                  className="mr-0.5"
+                />
               )}
               {activity === "workspace" && (
                 <Button

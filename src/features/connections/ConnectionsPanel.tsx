@@ -9,11 +9,14 @@ import {
 } from "lucide-react";
 
 import { useArtifact } from "@/components/artifact/artifact-context";
+import { EmptyState } from "@/components/empty-state";
 import {
   ListPane,
+  ListPaneActions,
   ListPaneHeader,
   ListPaneScroll,
   ListPaneTitle,
+  ListPaneTitleRow,
 } from "@/components/list-pane";
 import { ProdBadge } from "@/components/prod-badge";
 import { Button } from "@/components/ui/button";
@@ -198,9 +201,9 @@ export function ConnectionsPanel() {
   return (
     <ListPane>
       <ListPaneHeader>
-        <div className="mb-2 flex items-center gap-2">
+        <ListPaneTitleRow>
           <ListPaneTitle>Connections</ListPaneTitle>
-          <div className="ml-auto flex items-center gap-0.5">
+          <ListPaneActions>
             <Button
               size="sm"
               variant="ghost"
@@ -221,30 +224,33 @@ export function ConnectionsPanel() {
             >
               <Plus className="size-4" />
             </Button>
-          </div>
-        </div>
+          </ListPaneActions>
+        </ListPaneTitleRow>
       </ListPaneHeader>
 
       <ListPaneScroll>
         <div className="space-y-1 px-1">
           {connections.length === 0 && (
-            <div className="mx-1 mt-2 space-y-3 rounded-2xl border-2 border-dashed border-muted px-4 py-10 text-center">
-              <p className="text-sm text-muted-foreground text-pretty">
-                Add Postgres or SQLite, or open a seeded demo to explore.
-              </p>
-              <div className="flex flex-col gap-2">
-                <Button size="sm" onClick={() => setOpen(true)}>
-                  Add connection
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => void connectDemo()}
-                >
-                  Open demo SQLite
-                </Button>
-              </div>
-            </div>
+            <EmptyState
+              dashed
+              className="min-h-40 p-4"
+              title="No connections"
+              description="Add Postgres or SQLite, or open a seeded demo to explore."
+              actions={
+                <>
+                  <Button size="sm" onClick={() => setOpen(true)}>
+                    Add connection
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => void connectDemo()}
+                  >
+                    Open demo SQLite
+                  </Button>
+                </>
+              }
+            />
           )}
 
           {connections.map((c) => {

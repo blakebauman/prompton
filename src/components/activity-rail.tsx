@@ -29,7 +29,7 @@ type ActivityRailProps = {
 
 /**
  * Narrow activity rail for primary app areas.
- * Monochrome only — active = muted surface, not colored accent.
+ * Monochrome only — active uses a frosted circular control.
  */
 export function ActivityRail({
   active,
@@ -51,7 +51,7 @@ export function ActivityRail({
         P
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2.5">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = active === tab.id;
@@ -64,14 +64,26 @@ export function ActivityRail({
               aria-current={isActive ? "page" : undefined}
               onClick={() => onSelect(tab.id)}
               className={cn(
-                "relative flex size-11 items-center justify-center rounded-full transition-colors",
+                "relative flex size-11 items-center justify-center overflow-hidden rounded-full transition-all duration-200",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                 isActive
-                  ? "bg-muted text-foreground shadow-sm ring-1 ring-border"
+                  ? "border border-white/[0.08] bg-white/[0.06] text-foreground shadow-lg backdrop-blur-sm dark:bg-white/[0.07]"
                   : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
               )}
             >
-              <Icon className="size-5" />
+              {isActive && (
+                <span
+                  className="pointer-events-none absolute inset-0 rounded-full border border-foreground/15"
+                  style={{
+                    maskImage:
+                      "linear-gradient(to bottom, black, transparent 60%)",
+                    WebkitMaskImage:
+                      "linear-gradient(to bottom, black, transparent 60%)",
+                  }}
+                  aria-hidden
+                />
+              )}
+              <Icon className="relative z-10 size-5" />
             </button>
           );
         })}

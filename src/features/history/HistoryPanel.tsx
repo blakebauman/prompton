@@ -10,9 +10,11 @@ import { EmptyState } from "@/components/empty-state";
 import { useArtifact } from "@/components/artifact/artifact-context";
 import {
   ListPane,
+  ListPaneActions,
   ListPaneHeader,
   ListPaneScroll,
   ListPaneTitle,
+  ListPaneTitleRow,
 } from "@/components/list-pane";
 import { Button } from "@/components/ui/button";
 import { formatWhen } from "@/lib/format";
@@ -91,25 +93,27 @@ export function HistoryPanel({
       <div className="w-[320px] shrink-0">
         <ListPane>
           <ListPaneHeader>
-            <div className="mb-1 flex items-center justify-between gap-2">
+            <ListPaneTitleRow className="mb-1">
               <ListPaneTitle>History</ListPaneTitle>
               {entries.length > 0 && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 px-2 text-xs text-muted-foreground"
-                  onClick={() => void clearAll()}
-                >
-                  Clear
-                </Button>
+                <ListPaneActions>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs text-muted-foreground"
+                    onClick={() => void clearAll()}
+                  >
+                    Clear
+                  </Button>
+                </ListPaneActions>
               )}
-            </div>
-            <p className="text-[11px] text-muted-foreground">
+            </ListPaneTitleRow>
+            <p className="px-0.5 text-[11px] text-muted-foreground">
               Recent queries and agent runs
             </p>
           </ListPaneHeader>
-          <ListPaneScroll>
-            <div className="space-y-1 px-1">
+          <ListPaneScroll className="pt-24">
+            <div className="space-y-0.5 px-1">
               {entries.length === 0 ? (
                 <EmptyState
                   dashed
@@ -126,7 +130,7 @@ export function HistoryPanel({
                       key={e.id}
                       type="button"
                       className={cn(
-                        "flex w-full items-start gap-2 rounded-lg border p-3 text-left transition-colors",
+                        "flex w-full items-start gap-2 rounded-lg border p-2.5 text-left transition-colors",
                         active
                           ? "border-border bg-muted/70"
                           : "border-transparent hover:bg-muted/30",
@@ -135,21 +139,21 @@ export function HistoryPanel({
                     >
                       <KindIcon kind={e.kind} />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13px] font-medium">
-                          {e.title}
-                        </span>
-                        <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                           <span className="capitalize">{e.kind}</span>
+                          <span aria-hidden>·</span>
+                          <span className="shrink-0 tabular-nums">
+                            {formatWhen(e.createdAt)}
+                          </span>
                           {e.connName && (
                             <>
                               <span aria-hidden>·</span>
                               <span className="truncate">{e.connName}</span>
                             </>
                           )}
-                          <span aria-hidden>·</span>
-                          <span className="shrink-0 tabular-nums">
-                            {formatWhen(e.createdAt)}
-                          </span>
+                        </span>
+                        <span className="mt-0.5 block line-clamp-2 text-[13px] font-medium leading-snug">
+                          {e.title}
                         </span>
                       </span>
                     </button>
