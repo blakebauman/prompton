@@ -18,7 +18,9 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
+import { MultiSelect } from "@/components/ui/multi-select";
 import {
   Select,
   SelectContent,
@@ -26,7 +28,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { EmptyState } from "@/components/empty-state";
 import { useWorkspace } from "@/stores/workspace";
 
 type ChartKind = "bar" | "line";
@@ -125,16 +126,18 @@ export function ResultsChart() {
     return config;
   }, [activeCategory, activeValues]);
 
-  function toggleValueCol(name: string) {
-    setValueCols((prev) => {
-      const base = prev.length > 0 ? prev : inferred.values;
-      if (base.includes(name)) {
-        return base.filter((n) => n !== name);
-      }
-      if (base.length >= 3) return base;
-      return [...base, name];
-    });
-  }
+  const seriesOptions = useMemo(() => {
+    const names = columns
+      .map((c) => c.name)
+      .filter(
+        (n) =>
+          n !== activeCategory &&
+          rows.some((r) =>
+            isNumericCell(r[columns.findIndex((c) => c.name === n)]),
+          ),
+      );
+    return names.map((name) => ({ value: name, label: name }));
+  }, [columns, rows, activeCategory]);
 
   if (!result) {
     return (
@@ -194,37 +197,14 @@ export function ResultsChart() {
             ))}
           </SelectContent>
         </Select>
-        <div className="flex min-w-0 flex-1 flex-wrap gap-1">
-          {inferred.values.concat(
-            columns
-              .map((c) => c.name)
-              .filter(
-                (n) =>
-                  n !== activeCategory &&
-                  !inferred.values.includes(n) &&
-                  rows.some((r) =>
-                    isNumericCell(r[columns.findIndex((c) => c.name === n)]),
-                  ),
-              )
-              .slice(0, 4),
-          )
-            .filter((n, i, arr) => arr.indexOf(n) === i)
-            .map((name) => {
-              const on = activeValues.includes(name);
-              return (
-                <Button
-                  key={name}
-                  size="sm"
-                  variant={on ? "secondary" : "ghost"}
-                  className="h-7 max-w-[140px] truncate px-2 text-[11px]"
-                  onClick={() => toggleValueCol(name)}
-                >
-                  {name}
-                </Button>
-              );
-            })}
-        </div>
-        <span className="text-[11px] text-muted-foreground">
+        <MultiSelect
+          className="max-w-[200px]"
+          options={seriesOptions}
+          value={activeValues}
+          onChange={(next) => setValueCols(next.slice(0, 5))}
+          placeholder="Series…"
+        />
+        <span className="ml-auto text-[11px] text-muted-foreground">
           {chartData.length} points
           {rows.length > 100 ? " · first 100 loaded" : ""}
         </span>

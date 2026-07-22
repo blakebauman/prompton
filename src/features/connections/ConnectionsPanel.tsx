@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   MoreHorizontal,
   Network,
@@ -16,6 +16,7 @@ import {
   ListPaneActions,
   ListPaneHeader,
   ListPaneScroll,
+  ListPaneSearch,
   ListPaneTitle,
   ListPaneTitleRow,
 } from "@/components/list-pane";
@@ -65,6 +66,7 @@ export function ConnectionsPanel() {
   } = useWorkspace();
   const { open: openArtifact } = useArtifact();
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const [dialect, setDialect] = useState<Dialect>("sqlite");
   const [isProduction, setIsProduction] = useState(false);
   const [form, setForm] = useState({
@@ -200,6 +202,15 @@ export function ConnectionsPanel() {
     setConnections(connections.map((c) => (c.id === next.id ? next : c)));
   }
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return connections;
+    return connections.filter((c) => {
+      const hay = `${c.name} ${c.dialect} ${c.summary}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [connections, query]);
+
   return (
     <ListPane>
       <ListPaneHeader>
@@ -228,6 +239,13 @@ export function ConnectionsPanel() {
             </Button>
           </ListPaneActions>
         </ListPaneTitleRow>
+        {connections.length > 0 && (
+          <ListPaneSearch
+            value={query}
+            onChange={setQuery}
+            placeholder="Search connections…"
+          />
+        )}
       </ListPaneHeader>
 
       <ListPaneScroll>
@@ -255,7 +273,16 @@ export function ConnectionsPanel() {
             />
           )}
 
-          {connections.map((c) => {
+          {connections.length > 0 && filtered.length === 0 && (
+            <EmptyState
+              dashed
+              className="min-h-32 p-4"
+              title="No matches"
+              description="Try a different name, dialect, or host."
+            />
+          )}
+
+          {filtered.map((c) => {
             const active = activeConnId === c.id;
             return (
               <div key={c.id} className="group relative">

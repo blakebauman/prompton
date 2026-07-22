@@ -6,7 +6,9 @@ import {
   type ReactNode,
   type UIEvent,
 } from "react";
+import { Search } from "lucide-react";
 
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 /** List column: edge hairline, top fade, overlay header. */
@@ -96,6 +98,34 @@ export function ListPaneActions({
   return (
     <div className={cn("ml-auto flex shrink-0 items-center gap-0.5", className)}>
       {children}
+    </div>
+  );
+}
+
+/** Compact search field for overlay list headers. */
+export function ListPaneSearch({
+  value,
+  onChange,
+  placeholder = "Search…",
+  className,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  return (
+    <div className={cn("relative", className)}>
+      <Search
+        className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground/70"
+        aria-hidden
+      />
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="h-8 rounded-md border-border/60 bg-background/60 pr-2.5 pl-8 text-xs shadow-none focus-visible:ring-1"
+      />
     </div>
   );
 }

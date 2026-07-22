@@ -1,18 +1,23 @@
-import { useCallback, useEffect, useState } from "react";
-import {
-  Bot,
-  Database,
-  History,
-  Trash2,
-} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Bot, Database, History, Trash2 } from "lucide-react";
 
-import { EmptyState } from "@/components/empty-state";
 import { useArtifact } from "@/components/artifact/artifact-context";
+import {
+  DetailPane,
+  DetailPaneActions,
+  DetailPaneHeader,
+  DetailPaneMeta,
+  DetailPaneScroll,
+  DetailPaneTitle,
+} from "@/components/detail-pane";
+import { EmptyState } from "@/components/empty-state";
+import { ExpandableClamp } from "@/components/expandable-clamp";
 import {
   ListPane,
   ListPaneActions,
   ListPaneHeader,
   ListPaneScroll,
+  ListPaneSearch,
   ListPaneTitle,
   ListPaneTitleRow,
 } from "@/components/list-pane";
@@ -40,7 +45,20 @@ export function HistoryPanel({
   const { open: openArtifact } = useArtifact();
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
   const selected = entries.find((e) => e.id === selectedId) ?? null;
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return entries;
+    return entries.filter(
+      (e) =>
+        e.title.toLowerCase().includes(q) ||
+        e.kind.toLowerCase().includes(q) ||
+        (e.connName?.toLowerCase().includes(q) ?? false) ||
+        e.body.toLowerCase().includes(q),
+    );
+  }, [entries, query]);
 
   const refresh = useCallback(async () => {
     try {
@@ -108,11 +126,14 @@ export function HistoryPanel({
                 </ListPaneActions>
               )}
             </ListPaneTitleRow>
-            <p className="px-0.5 text-[11px] text-muted-foreground">
-              Recent queries and agent runs
-            </p>
+            <ListPaneSearch
+              value={query}
+              onChange={setQuery}
+              placeholder="Search history…"
+              className="mb-1"
+            />
           </ListPaneHeader>
-          <ListPaneScroll className="pt-24">
+          <ListPaneScroll className="pt-28">
             <div className="space-y-0.5 px-1">
               {entries.length === 0 ? (
                 <EmptyState
@@ -122,15 +143,21 @@ export function HistoryPanel({
                   title="No history yet"
                   description="Runs from Chat and SQL will show up here."
                 />
+              ) : filtered.length === 0 ? (
+                <EmptyState
+                  className="min-h-40 p-4"
+                  title="No matches"
+                  description={`Nothing matched “${query.trim()}”.`}
+                />
               ) : (
-                entries.map((e) => {
+                filtered.map((e) => {
                   const active = selectedId === e.id;
                   return (
                     <button
                       key={e.id}
                       type="button"
                       className={cn(
-                        "flex w-full items-start gap-2 rounded-lg border p-2.5 text-left transition-colors",
+                        "flex w-full items-start gap-2 rounded-md border p-2.5 text-left transition-colors",
                         active
                           ? "border-border bg-muted/70"
                           : "border-transparent hover:bg-muted/30",
@@ -165,13 +192,12 @@ export function HistoryPanel({
         </ListPane>
       </div>
 
-      <div className="relative min-w-0 flex-1 overflow-hidden border-l border-border/60">
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-16 bg-gradient-to-b from-background to-transparent" />
+      <DetailPane>
         {selected ? (
           <>
-            <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 px-6 pt-5">
+            <DetailPaneHeader>
               <div className="min-w-0">
-                <p className="text-[11px] text-muted-foreground">
+                <DetailPaneMeta>
                   <span className="capitalize">{selected.kind}</span>
                   {selected.connName ? ` · ${selected.connName}` : ""}
                   {" · "}
@@ -182,12 +208,10 @@ export function HistoryPanel({
                   {selected.meta?.totalRows != null && (
                     <> · {String(selected.meta.totalRows)} rows</>
                   )}
-                </p>
-                <h2 className="mt-1 truncate text-xl font-bold tracking-tight">
-                  {selected.title}
-                </h2>
+                </DetailPaneMeta>
+                <DetailPaneTitle>{selected.title}</DetailPaneTitle>
               </div>
-              <div className="flex shrink-0 gap-1">
+              <DetailPaneActions>
                 {selected.kind === "query" && (
                   <Button
                     size="sm"
@@ -210,38 +234,42 @@ export function HistoryPanel({
                 >
                   <Trash2 className="size-3.5" />
                 </Button>
-              </div>
-            </div>
-            <div className="h-full space-y-4 overflow-y-auto px-6 pt-20 pb-8">
-              <pre className="whitespace-pre-wrap rounded-md border border-border/50 bg-muted/25 p-4 font-mono text-xs leading-relaxed text-muted-foreground">
-                {selected.body}
-              </pre>
+              </DetailPaneActions>
+            </DetailPaneHeader>
+            <DetailPaneScroll className="space-y-4">
+              <ExpandableClamp maxHeight={240}>
+                <pre className="whitespace-pre-wrap rounded-md border border-border/50 bg-muted/25 p-4 font-mono text-xs leading-relaxed text-muted-foreground">
+                  {selected.body}
+                </pre>
+              </ExpandableClamp>
               {selected.detail && (
                 <div>
                   <h3 className="mb-2 text-xs font-medium text-muted-foreground">
                     Response
                   </h3>
-                  <pre className="whitespace-pre-wrap rounded-md border border-border/50 bg-muted/15 p-4 text-xs leading-relaxed">
-                    {selected.detail}
-                  </pre>
+                  <ExpandableClamp maxHeight={280}>
+                    <pre className="whitespace-pre-wrap rounded-md border border-border/50 bg-muted/15 p-4 text-xs leading-relaxed">
+                      {selected.detail}
+                    </pre>
+                  </ExpandableClamp>
                 </div>
               )}
-            </div>
+            </DetailPaneScroll>
           </>
         ) : (
           <>
-            <div className="absolute inset-x-0 top-0 z-20 px-6 pt-5">
-              <h2 className="text-xl font-bold tracking-tight">Run detail</h2>
-            </div>
-            <div className="h-full px-6 pt-16">
+            <DetailPaneHeader>
+              <DetailPaneTitle className="mt-0">Run detail</DetailPaneTitle>
+            </DetailPaneHeader>
+            <DetailPaneScroll>
               <EmptyState
                 title="Select a run"
                 description="Pick a query or agent transcript from the list."
               />
-            </div>
+            </DetailPaneScroll>
           </>
         )}
-      </div>
+      </DetailPane>
     </div>
   );
 }

@@ -167,3 +167,24 @@
   width: 0;
   height: 0;
 }
+
+/* Edge fades for overlay headers / expandable clamps */
+.edge-fade-top {
+  background: linear-gradient(to bottom, var(--background), transparent);
+}
+.edge-fade-bottom {
+  background: linear-gradient(to top, var(--background), transparent);
+}
+
+.surface-frosted {
+  background: color-mix(in oklab, white 80%, transparent);
+  box-shadow: 0 1px 2px color-mix(in oklab, black 6%, transparent);
+  outline: 1px solid color-mix(in oklab, black 5%, transparent);
+  backdrop-filter: blur(20px);
+}
+.dark .surface-frosted {
+  background: color-mix(in oklab, black 55%, transparent);
+  box-shadow: none;
+  outline: 1px solid color-mix(in oklab, white 10%, transparent);
+  backdrop-filter: blur(12px);
+}

@@ -13,6 +13,7 @@ import {
   useArtifact,
   type ArtifactKind,
 } from "@/components/artifact/artifact-context";
+import { ExpandableClamp } from "@/components/expandable-clamp";
 import { UnderlineTab, UnderlineTabs } from "@/components/underline-tabs";
 import { Button } from "@/components/ui/button";
 import { ResultsChart } from "@/features/results/ResultsChart";
@@ -95,9 +96,11 @@ function OpenArtifactPane() {
             <div className="h-full overflow-y-auto overflow-x-hidden">
               <div className="p-3">
                 {explainPlan ? (
-                  <pre className="whitespace-pre-wrap rounded-lg border border-border/60 bg-muted/40 p-3 font-mono text-xs leading-relaxed">
-                    {explainPlan}
-                  </pre>
+                  <ExpandableClamp maxHeight={320}>
+                    <pre className="whitespace-pre-wrap rounded-lg border border-border/60 bg-muted/40 p-3 font-mono text-xs leading-relaxed">
+                      {explainPlan}
+                    </pre>
+                  </ExpandableClamp>
                 ) : (
                   <EmptyArtifact
                     title="No explain plan"
@@ -168,9 +171,11 @@ function OpenArtifactPane() {
                             ({s.chars})
                           </span>
                         </summary>
-                        <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap text-muted-foreground">
-                          {s.content}
-                        </pre>
+                        <ExpandableClamp maxHeight={180} className="mt-2">
+                          <pre className="whitespace-pre-wrap text-muted-foreground">
+                            {s.content}
+                          </pre>
+                        </ExpandableClamp>
                       </details>
                     ))}
                   </>

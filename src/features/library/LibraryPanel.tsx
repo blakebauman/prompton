@@ -1,12 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BookMarked, FileText, Plus, Sparkles } from "lucide-react";
 
+import {
+  DetailPane,
+  DetailPaneActions,
+  DetailPaneHeader,
+  DetailPaneMeta,
+  DetailPaneScroll,
+  DetailPaneTitle,
+} from "@/components/detail-pane";
 import { EmptyState } from "@/components/empty-state";
 import {
   ListPane,
   ListPaneActions,
   ListPaneHeader,
   ListPaneScroll,
+  ListPaneSearch,
   ListPaneTitle,
   ListPaneTitleRow,
 } from "@/components/list-pane";
@@ -48,9 +57,29 @@ export function LibraryPanel({
   const [saving, setSaving] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
+  const [query, setQuery] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newBody, setNewBody] = useState("");
   const [creating, setCreating] = useState(false);
+
+  const filteredSkills = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return skills;
+    return skills.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        (s.description?.toLowerCase().includes(q) ?? false),
+    );
+  }, [skills, query]);
+
+  const filteredPrompts = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return prompts;
+    return prompts.filter(
+      (p) =>
+        p.title.toLowerCase().includes(q) || p.body.toLowerCase().includes(q),
+    );
+  }, [prompts, query]);
 
   async function refresh() {
     try {
@@ -110,6 +139,10 @@ export function LibraryPanel({
   const empty =
     (tab === "skills" && skills.length === 0) ||
     (tab === "prompts" && prompts.length === 0);
+  const filteredEmpty =
+    !empty &&
+    ((tab === "skills" && filteredSkills.length === 0) ||
+      (tab === "prompts" && filteredPrompts.length === 0));
 
   const hasSelection =
     (tab === "skills" && !!selectedSkill) ||
@@ -215,9 +248,17 @@ export function LibraryPanel({
                 </UnderlineTab>
               ))}
             </UnderlineTabs>
+            <ListPaneSearch
+              value={query}
+              onChange={setQuery}
+              placeholder={
+                tab === "skills" ? "Search skills…" : "Search prompts…"
+              }
+              className="mt-2"
+            />
           </ListPaneHeader>
 
-          <ListPaneScroll className="pt-28">
+          <ListPaneScroll className="pt-36">
             <div className="space-y-0.5 px-1">
               {empty && (
                 <EmptyState
@@ -246,8 +287,16 @@ export function LibraryPanel({
                 />
               )}
 
+              {filteredEmpty && (
+                <EmptyState
+                  className="min-h-40 p-4"
+                  title="No matches"
+                  description={`Nothing matched “${query.trim()}”.`}
+                />
+              )}
+
               {tab === "skills" &&
-                skills.map((s) => {
+                filteredSkills.map((s) => {
                   const active = selectedSkill === s.name;
                   return (
                     <button
@@ -277,7 +326,7 @@ export function LibraryPanel({
                 })}
 
               {tab === "prompts" &&
-                prompts.map((p) => {
+                filteredPrompts.map((p) => {
                   const active = selectedPrompt === p.id;
                   return (
                     <button
@@ -308,31 +357,32 @@ export function LibraryPanel({
         </ListPane>
       </div>
 
-      <div className="relative min-w-0 flex-1 overflow-hidden border-l border-border/60">
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-16 bg-gradient-to-b from-background to-transparent" />
+      <DetailPane>
         {hasSelection ? (
           <>
-            <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 px-6 pt-5">
+            <DetailPaneHeader>
               <div className="min-w-0">
-                <p className="text-[11px] text-muted-foreground">
+                <DetailPaneMeta>
                   {tab === "skills" ? "Skill" : "Prompt"}
                   {dirty ? " · unsaved" : ""}
-                </p>
-                <h2 className="mt-1 truncate text-xl font-bold tracking-tight">
+                </DetailPaneMeta>
+                <DetailPaneTitle>
                   {tab === "skills"
                     ? selectedSkill
                     : promptTitle || "Untitled prompt"}
-                </h2>
+                </DetailPaneTitle>
               </div>
-              <Button
-                size="sm"
-                disabled={!dirty || saving}
-                onClick={() => void save()}
-              >
-                {saving ? "Saving…" : dirty ? "Save" : "Saved"}
-              </Button>
-            </div>
-            <div className="h-full space-y-3 overflow-y-auto px-6 pt-20 pb-8">
+              <DetailPaneActions>
+                <Button
+                  size="sm"
+                  disabled={!dirty || saving}
+                  onClick={() => void save()}
+                >
+                  {saving ? "Saving…" : dirty ? "Save" : "Saved"}
+                </Button>
+              </DetailPaneActions>
+            </DetailPaneHeader>
+            <DetailPaneScroll className="space-y-3">
               {tab === "skills" ? (
                 <>
                   <Input
@@ -376,16 +426,16 @@ export function LibraryPanel({
                   />
                 </>
               )}
-            </div>
+            </DetailPaneScroll>
           </>
         ) : (
           <>
-            <div className="absolute inset-x-0 top-0 z-20 px-6 pt-5">
-              <h2 className="text-xl font-bold tracking-tight">
+            <DetailPaneHeader>
+              <DetailPaneTitle className="mt-0">
                 {tab === "skills" ? "Skill" : "Prompt"}
-              </h2>
-            </div>
-            <div className="h-full px-6 pt-16">
+              </DetailPaneTitle>
+            </DetailPaneHeader>
+            <DetailPaneScroll>
               <EmptyState
                 title="Select an item"
                 description="Pick a skill or prompt from the list, or create a new one."
@@ -396,10 +446,10 @@ export function LibraryPanel({
                   </Button>
                 }
               />
-            </div>
+            </DetailPaneScroll>
           </>
         )}
-      </div>
+      </DetailPane>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-md">
