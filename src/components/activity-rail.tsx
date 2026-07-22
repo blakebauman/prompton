@@ -45,7 +45,7 @@ export function ActivityRail({
       aria-label="Primary"
     >
       <div
-        className="mb-4 flex size-9 items-center justify-center rounded-full border border-border/60 bg-muted/40 text-xs font-bold tracking-tight text-foreground"
+        className="mb-4 flex size-8 items-center justify-center rounded-md border border-border/60 bg-muted/40 text-[11px] font-bold tracking-tight text-foreground"
         aria-hidden
       >
         P

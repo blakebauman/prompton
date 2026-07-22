@@ -30,6 +30,7 @@ import { ConnectionsPanel } from "@/features/connections/ConnectionsPanel";
 import { HistoryPanel } from "@/features/history/HistoryPanel";
 import { LibraryPanel } from "@/features/library/LibraryPanel";
 import { SettingsPanel } from "@/features/settings/SettingsPanel";
+import { connectionMarkColor } from "@/lib/connection-mark";
 import { isDesktopRequiredError } from "@/lib/tauri";
 import { TOP_SAFE_AREA_PADDING } from "@/lib/ui";
 import { cn } from "@/lib/utils";
@@ -88,8 +89,16 @@ function AppShell() {
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <header className="flex h-10 shrink-0 items-center justify-between gap-3 border-b border-border/60 px-3">
             <div className="flex min-w-0 items-center gap-2.5">
-              <span className="shrink-0 text-sm font-semibold tracking-tight">
-                Prompton
+              <span className="flex shrink-0 items-center gap-2">
+                <span
+                  className="flex size-5 items-center justify-center rounded-md border border-border/60 bg-muted/50 text-[10px] font-bold tracking-tight"
+                  aria-hidden
+                >
+                  P
+                </span>
+                <span className="text-sm font-semibold tracking-tight">
+                  Prompton
+                </span>
               </span>
               {activity === "workspace" && active && (
                 <>
@@ -99,7 +108,7 @@ function AppShell() {
                   <span className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
                     <span
                       className="size-2 shrink-0 rounded-full ring-2 ring-background"
-                      style={{ background: active.color }}
+                      style={{ background: connectionMarkColor(active) }}
                       aria-hidden
                     />
                     <span className="truncate font-medium text-foreground">

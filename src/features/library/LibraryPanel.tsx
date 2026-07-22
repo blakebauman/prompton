@@ -218,7 +218,7 @@ export function LibraryPanel({
           </ListPaneHeader>
 
           <ListPaneScroll className="pt-28">
-            <div className="space-y-1 px-1">
+            <div className="space-y-0.5 px-1">
               {empty && (
                 <EmptyState
                   dashed
@@ -254,7 +254,7 @@ export function LibraryPanel({
                       key={s.name}
                       type="button"
                       className={cn(
-                        "flex w-full items-start gap-2 rounded-lg border p-3 text-left transition-colors",
+                        "flex w-full items-start gap-2 rounded-md border p-2.5 text-left transition-colors",
                         active
                           ? "border-border bg-muted/70"
                           : "border-transparent hover:bg-muted/30",
@@ -263,7 +263,7 @@ export function LibraryPanel({
                     >
                       <Sparkles className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
                       <span className="min-w-0">
-                        <span className="block truncate text-[13px] font-medium">
+                        <span className="block truncate text-[13px] font-medium leading-snug">
                           {s.name}
                         </span>
                         {s.description && (
@@ -284,7 +284,7 @@ export function LibraryPanel({
                       key={p.id}
                       type="button"
                       className={cn(
-                        "flex w-full items-start gap-2 rounded-lg border p-3 text-left transition-colors",
+                        "flex w-full items-start gap-2 rounded-md border p-2.5 text-left transition-colors",
                         active
                           ? "border-border bg-muted/70"
                           : "border-transparent hover:bg-muted/30",
@@ -293,7 +293,7 @@ export function LibraryPanel({
                     >
                       <FileText className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
                       <span className="min-w-0">
-                        <span className="block truncate text-[13px] font-medium">
+                        <span className="block truncate text-[13px] font-medium leading-snug">
                           {p.title}
                         </span>
                         <span className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
@@ -434,7 +434,7 @@ export function LibraryPanel({
             />
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setCreateOpen(false)}>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>
               Cancel
             </Button>
             <Button

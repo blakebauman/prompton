@@ -44,16 +44,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { connectionMarkColor } from "@/lib/connection-mark";
 import { abandonConnectionWork } from "@/lib/session";
 import { api, isDesktopRequiredError } from "@/lib/tauri";
 import type { ConnectRequest, ConnectionInfo, Dialect } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/stores/workspace";
 
+/** Stored on new connections; UI prefers `connectionMarkColor`. */
 const COLOR = {
-  sqlite: "#0f766e",
-  postgres: "#2563eb",
-  prod: "#b45309",
+  sqlite: "oklch(0.55 0 0)",
+  postgres: "oklch(0.72 0 0)",
+  prod: "var(--prod)",
 } as const;
 
 export function ConnectionsPanel() {
@@ -275,7 +277,7 @@ export function ConnectionsPanel() {
                           ? "ring-2 ring-foreground/25"
                           : "opacity-35",
                       )}
-                      style={{ background: c.color }}
+                      style={{ background: connectionMarkColor(c) }}
                       title={c.connected ? "Connected" : "Disconnected"}
                     />
                     <span className="truncate text-[13px] font-medium leading-snug">
@@ -421,12 +423,12 @@ export function ConnectionsPanel() {
           </DialogHeader>
           <div className="grid gap-3">
             <div className="grid gap-1.5">
-              <Label>Dialect</Label>
+              <Label className="text-xs">Dialect</Label>
               <Select
                 value={dialect}
                 onValueChange={(v) => setDialect(v as Dialect)}
               >
-                <SelectTrigger>
+                <SelectTrigger size="sm" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -436,16 +438,18 @@ export function ConnectionsPanel() {
               </Select>
             </div>
             <div className="grid gap-1.5">
-              <Label>Name</Label>
+              <Label className="text-xs">Name</Label>
               <Input
+                className="h-8"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
             </div>
             {dialect === "sqlite" ? (
               <div className="grid gap-1.5">
-                <Label>File path</Label>
+                <Label className="text-xs">File path</Label>
                 <Input
+                  className="h-8"
                   placeholder="/path/to/database.db"
                   value={form.filePath}
                   onChange={(e) =>
@@ -457,8 +461,9 @@ export function ConnectionsPanel() {
               <>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="col-span-2 grid gap-1.5">
-                    <Label>Host</Label>
+                    <Label className="text-xs">Host</Label>
                     <Input
+                      className="h-8"
                       value={form.host}
                       onChange={(e) =>
                         setForm({ ...form, host: e.target.value })
@@ -466,8 +471,9 @@ export function ConnectionsPanel() {
                     />
                   </div>
                   <div className="grid gap-1.5">
-                    <Label>Port</Label>
+                    <Label className="text-xs">Port</Label>
                     <Input
+                      className="h-8"
                       value={form.port}
                       onChange={(e) =>
                         setForm({ ...form, port: e.target.value })
@@ -476,8 +482,9 @@ export function ConnectionsPanel() {
                   </div>
                 </div>
                 <div className="grid gap-1.5">
-                  <Label>Database</Label>
+                  <Label className="text-xs">Database</Label>
                   <Input
+                    className="h-8"
                     value={form.database}
                     onChange={(e) =>
                       setForm({ ...form, database: e.target.value })
@@ -486,8 +493,9 @@ export function ConnectionsPanel() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="grid gap-1.5">
-                    <Label>User</Label>
+                    <Label className="text-xs">User</Label>
                     <Input
+                      className="h-8"
                       value={form.username}
                       onChange={(e) =>
                         setForm({ ...form, username: e.target.value })
@@ -495,8 +503,9 @@ export function ConnectionsPanel() {
                     />
                   </div>
                   <div className="grid gap-1.5">
-                    <Label>Password</Label>
+                    <Label className="text-xs">Password</Label>
                     <Input
+                      className="h-8"
                       type="password"
                       value={form.password}
                       onChange={(e) =>
@@ -507,9 +516,11 @@ export function ConnectionsPanel() {
                 </div>
               </>
             )}
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+            <div className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-muted/30 p-3">
               <div className="space-y-0.5">
-                <Label htmlFor="is-production">Production database</Label>
+                <Label htmlFor="is-production" className="text-xs">
+                  Production database
+                </Label>
                 <p className="text-xs text-muted-foreground text-pretty">
                   {dialect === "postgres"
                     ? "Postgres defaults to production: read-only until HITL or admin unlock."

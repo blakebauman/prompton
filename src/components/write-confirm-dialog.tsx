@@ -49,7 +49,7 @@ export function WriteConfirmDialog({
         onReject();
       }}
     >
-      <DialogContent className="gap-4 sm:max-w-lg">
+      <DialogContent className="gap-3 sm:max-w-md">
         <DialogHeader className="gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <DialogTitle>
@@ -65,14 +65,14 @@ export function WriteConfirmDialog({
         </DialogHeader>
 
         {isProduction && (
-          <div className="rounded-lg border border-prod/30 bg-prod-muted px-3 py-2 text-xs leading-snug text-prod text-pretty">
+          <div className="rounded-md border border-prod/30 bg-prod-muted px-3 py-2 text-xs leading-snug text-prod text-pretty">
             {adminWritesUnlocked
               ? "Admin unlock is on. This statement still needs your explicit approval before it runs."
               : "Production is locked. Approving runs this statement only; the connection stays read-only afterward."}
           </div>
         )}
 
-        <pre className="max-h-56 overflow-auto rounded-lg border border-border/60 bg-muted/50 p-3 font-mono text-xs leading-relaxed">
+        <pre className="max-h-56 overflow-auto rounded-md border border-border/60 bg-muted/40 p-3 font-mono text-xs leading-relaxed">
           {sql}
         </pre>
 
@@ -87,7 +87,12 @@ export function WriteConfirmDialog({
             Reject
           </Button>
           <Button
-            variant="destructive"
+            variant={isProduction ? "destructive" : "default"}
+            className={
+              isProduction
+                ? "bg-prod text-white hover:bg-prod/90 focus-visible:ring-prod/30"
+                : undefined
+            }
             onClick={() => {
               outcome.current = "approve";
               onApprove();

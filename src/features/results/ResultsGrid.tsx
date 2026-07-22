@@ -454,27 +454,25 @@ export function ResultsGrid() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3 text-xs text-muted-foreground">
-        <span className="min-w-0 truncate">
+      <div className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-2 text-[11px] text-muted-foreground">
+        <span className="min-w-0 truncate px-1">
           <span className="font-medium text-foreground">
             {result.totalRows.toLocaleString()}
           </span>{" "}
           rows
           {result.truncated ? " · truncated" : ""}
-          <span className="text-muted-foreground/70">
-            {" "}
-            · {result.durationMs}ms
-            {result.affectedRows != null
-              ? ` · ${result.affectedRows} affected`
-              : ""}
-            {loadedRowCount(result) < result.totalRows
-              ? ` · ${loadedRowCount(result).toLocaleString()} loaded`
-              : ""}
-            {selected.size > 0
-              ? ` · ${selected.size} cell${selected.size === 1 ? "" : "s"} selected`
-              : ""}
-            {canEdit ? " · double-click to edit" : ""}
-          </span>
+          {" · "}
+          {result.durationMs}ms
+          {result.affectedRows != null
+            ? ` · ${result.affectedRows} affected`
+            : ""}
+          {loadedRowCount(result) < result.totalRows
+            ? ` · ${loadedRowCount(result).toLocaleString()} loaded`
+            : ""}
+          {selected.size > 0
+            ? ` · ${selected.size} cell${selected.size === 1 ? "" : "s"} selected`
+            : ""}
+          {canEdit ? " · double-click to edit" : ""}
         </span>
         <div className="flex shrink-0 items-center gap-1">
           <Button
@@ -566,11 +564,11 @@ export function ResultsGrid() {
             position: "relative",
           }}
         >
-          <div className="sticky top-0 z-10 flex border-b bg-muted/80 backdrop-blur">
+          <div className="sticky top-0 z-10 flex border-b border-border/60 bg-muted/50 backdrop-blur">
             {columns.map((c) => (
               <div
                 key={c.name}
-                className="w-40 shrink-0 truncate border-r px-2 py-1.5 font-medium"
+                className="w-40 shrink-0 truncate border-r border-border/50 px-2 py-1.5 font-medium"
                 title={`${c.name} (${c.dataType})`}
               >
                 {c.name}
@@ -602,9 +600,10 @@ export function ResultsGrid() {
                     <div
                       key={c.name}
                       className={cn(
-                        "w-40 shrink-0 border-r px-2 py-1.5",
-                        isSelected && "bg-accent",
-                        !isSelected && "hover:bg-accent/40",
+                        "w-40 shrink-0 border-r border-border/40 px-2 py-1.5",
+                        isSelected &&
+                          "bg-foreground/[0.07] outline outline-1 -outline-offset-1 outline-foreground/20",
+                        !isSelected && "hover:bg-muted/50",
                         row && isNullCell(row[i]) && !isEditing
                           ? "italic text-muted-foreground/70"
                           : "",

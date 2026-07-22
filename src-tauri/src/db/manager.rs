@@ -140,9 +140,9 @@ impl ConnectionManager {
             file_path: req.file_path,
             color: req.color.unwrap_or_else(|| {
                 if req.dialect == Dialect::Sqlite {
-                    "#0f766e".into()
+                    "oklch(0.55 0 0)".into()
                 } else {
-                    "#2563eb".into()
+                    "oklch(0.72 0 0)".into()
                 }
             }),
             ssl_mode: req.ssl_mode,
@@ -647,7 +647,7 @@ impl ConnectionManager {
                 username: None,
                 password: None,
                 file_path: Some(path_str),
-                color: Some("#0f766e".into()),
+                color: Some("oklch(0.55 0 0)".into()),
                 ssl_mode: None,
                 is_production: Some(false),
             })
