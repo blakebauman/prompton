@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { Label } from "@/components/ui/label";
 
-/** Voicebox SettingSection — monochrome. */
+/** Settings section header + stacked rows. */
 export function SettingSection({
   title,
   description,
@@ -23,7 +23,7 @@ export function SettingSection({
   );
 }
 
-/** Voicebox SettingRow — label left, control right. */
+/** Settings row — label left, control right. */
 export function SettingRow({
   title,
   description,

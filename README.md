@@ -90,9 +90,9 @@ Linux bundles (`deb` / `appimage` / `rpm`) are configured in `tauri.conf.json`; 
 
 ## Architecture
 
-- **Frontend:** React + Vite + shadcn/ui monochrome (Voicebox IA: activity rail, list+detail, chat hub)
+- **Frontend:** React + Vite + shadcn/ui monochrome (activity rail, list+detail, chat hub)
 - **AI UI:** Vercel-style `ai-elements` (`Conversation`, `Message`/`MessageResponse`, `Tool`, `PromptInput`, `Suggestion`) — wired to the Tauri/Rust agent
-- **Artifact pane:** switchable right pane (Results / SQL / Schema / Explain / Context)
+- **Artifact pane:** switchable right pane (Results / Chart / SQL / Schema / Explain / Context)
 - **Backend:** Tauri 2 / Rust — connection pools, query engine, agent runtime, history/skills/prompts, secrets
 
 Agent tools never receive full tables by default; the context budgeter sends summaries and capped slices only. Switching connections cancels in-flight agent/query work and clears chat, results, and confirmations so sessions stay isolated.

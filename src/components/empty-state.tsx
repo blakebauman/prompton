@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-/** Shared empty / coming-soon panel (Voicebox dashed empty, monochrome). */
+/** Shared empty / coming-soon panel. */
 export function EmptyState({
   title,
   description,

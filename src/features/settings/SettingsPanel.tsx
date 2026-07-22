@@ -18,7 +18,7 @@ import type { ProviderKind, SkillMeta, PromptEntry } from "@/lib/types";
 import { useTheme, type ThemeMode } from "@/stores/theme";
 import { useWorkspace } from "@/stores/workspace";
 
-/** Full settings body — shadcn monochrome, Voicebox SettingRow layout. */
+/** Full settings body — shadcn monochrome SettingRow layout. */
 export function SettingsPanel() {
   const { setStatus, contextReport } = useWorkspace();
   const { mode: themeMode, setMode: setThemeMode } = useTheme();

@@ -15,24 +15,11 @@ import {
   ListPaneTitle,
 } from "@/components/list-pane";
 import { Button } from "@/components/ui/button";
+import { formatWhen } from "@/lib/format";
 import { api, isDesktopRequiredError, onEvent } from "@/lib/tauri";
 import type { HistoryEntry, HistoryKind } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/stores/workspace";
-
-function formatWhen(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
-}
 
 function KindIcon({ kind }: { kind: HistoryKind }) {
   if (kind === "agent") {

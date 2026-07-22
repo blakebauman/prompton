@@ -1,6 +1,7 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ChartColumn,
   Download,
   FileCode2,
   FileJson,
@@ -476,6 +477,15 @@ export function ResultsGrid() {
           </span>
         </span>
         <div className="flex shrink-0 items-center gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={result.totalRows === 0}
+            onClick={() => openArtifact("chart")}
+          >
+            <ChartColumn className="size-3.5" />
+            Chart
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

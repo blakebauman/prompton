@@ -28,7 +28,7 @@ type ActivityRailProps = {
 };
 
 /**
- * Voicebox-style narrow activity rail.
+ * Narrow activity rail for primary app areas.
  * Monochrome only — active = muted surface, not colored accent.
  */
 export function ActivityRail({

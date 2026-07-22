@@ -8,7 +8,13 @@ import {
 } from "react";
 
 /** Surfaces shown in Prompton’s artifact pane (fold.run pattern). */
-export type ArtifactKind = "results" | "sql" | "schema" | "explain" | "context";
+export type ArtifactKind =
+  | "results"
+  | "chart"
+  | "sql"
+  | "schema"
+  | "explain"
+  | "context";
 
 export const DEFAULT_ARTIFACT_KIND: ArtifactKind = "results";
 

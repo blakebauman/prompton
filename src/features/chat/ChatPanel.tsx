@@ -29,6 +29,7 @@ import {
   ToolOutput,
   type ToolState,
 } from "@/components/ai-elements/tool";
+import { ActivityPulse } from "@/components/activity-pulse";
 import { useArtifact } from "@/components/artifact/artifact-context";
 import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { Button } from "@/components/ui/button";
@@ -268,7 +269,10 @@ export function ChatPanel() {
     <div className="relative flex h-full flex-col overflow-hidden">
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-14 bg-gradient-to-b from-background to-transparent" />
       <div className="relative z-20 flex h-11 shrink-0 items-center justify-between px-4 pt-1">
-        <h2 className="text-lg font-bold tracking-tight">Chat</h2>
+        <div className="flex items-center gap-2">
+          {agentBusy && <ActivityPulse mode="busy" />}
+          <h2 className="text-lg font-bold tracking-tight">Chat</h2>
+        </div>
         {agentBusy && (
           <Button
             size="sm"

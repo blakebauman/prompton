@@ -1,5 +1,6 @@
 import {
   Braces,
+  ChartColumn,
   FileCode2,
   ListTree,
   Network,
@@ -14,6 +15,7 @@ import {
 } from "@/components/artifact/artifact-context";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ResultsChart } from "@/features/results/ResultsChart";
 import { ResultsGrid } from "@/features/results/ResultsGrid";
 import { SchemaPanel } from "@/features/schema/SchemaPanel";
 import { SqlEditor } from "@/features/sql-editor/SqlEditor";
@@ -27,16 +29,14 @@ const SWITCHABLE: ReadonlyArray<{
   icon: typeof Table2;
 }> = [
   { kind: "results", label: "Results", icon: Table2 },
+  { kind: "chart", label: "Chart", icon: ChartColumn },
   { kind: "sql", label: "SQL", icon: FileCode2 },
   { kind: "schema", label: "Schema", icon: Network },
   { kind: "explain", label: "Explain", icon: ListTree },
   { kind: "context", label: "Context", icon: Braces },
 ];
 
-/**
- * fold.run–style artifact pane with Voicebox inspector chrome:
- * soft inset panel, underline tabs, one switchable surface.
- */
+/** Artifact inspector: underline tabs + switchable Results/Chart/SQL/Schema/Explain/Context. */
 export function ArtifactPane() {
   const { state: artifact } = useArtifact();
   if (!artifact.open) return null;
@@ -96,6 +96,7 @@ function OpenArtifactPane() {
           className="absolute inset-0 flex flex-col animate-in fade-in duration-150"
         >
           {artifact.kind === "results" && <ResultsGrid />}
+          {artifact.kind === "chart" && <ResultsChart />}
           {artifact.kind === "sql" && <SqlEditor />}
           {artifact.kind === "schema" && <SchemaPanel />}
           {artifact.kind === "explain" && (

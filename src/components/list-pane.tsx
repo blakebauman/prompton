@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-/** Voicebox-style list column: edge hairline, top fade, overlay header. */
+/** List column: edge hairline, top fade, overlay header. */
 export function ListPane({
   className,
   children,

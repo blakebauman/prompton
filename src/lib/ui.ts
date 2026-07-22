@@ -1,5 +1,5 @@
 /**
- * Layout constants — Voicebox IA, shadcn monochrome look.
+ * Layout constants for the desktop shell (shadcn monochrome).
  * Do not introduce brand accent colors here.
  */
 

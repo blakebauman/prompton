@@ -25,7 +25,7 @@ import { useWorkspace } from "@/stores/workspace";
 
 type LibraryTab = "skills" | "prompts";
 
-/** Skills & prompts browser — Voicebox list+detail with create + edit. */
+/** Skills & prompts browser — list+detail with create + edit. */
 export function LibraryPanel({
   onOpenSettings,
 }: {

@@ -1,4 +1,4 @@
-/** macOS overlay drag strip — Voicebox pattern. No-op on Windows. */
+/** macOS overlay titlebar drag strip. No-op on Windows. */
 export function TitleBarDragRegion() {
   const isWindows =
     typeof navigator !== "undefined" && navigator.userAgent.includes("Windows");
