@@ -75,7 +75,12 @@ export function ListPaneTitle({
   children: ReactNode;
 }) {
   return (
-    <h2 className={cn("truncate text-lg font-bold tracking-tight", className)}>
+    <h2
+      className={cn(
+        "min-w-0 truncate text-base font-bold tracking-tight",
+        className,
+      )}
+    >
       {children}
     </h2>
   );

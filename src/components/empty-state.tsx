@@ -45,7 +45,7 @@ export function EmptyState({
       )}
     >
       {dashed ? (
-        <div className="mx-auto w-full max-w-sm rounded-2xl border-2 border-dashed border-muted px-6 py-10">
+        <div className="mx-auto w-full max-w-sm rounded-lg border border-dashed border-muted-foreground/30 px-6 py-10">
           {inner}
         </div>
       ) : (

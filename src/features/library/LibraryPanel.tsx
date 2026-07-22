@@ -10,6 +10,7 @@ import {
   ListPaneTitle,
   ListPaneTitleRow,
 } from "@/components/list-pane";
+import { UnderlineTab, UnderlineTabs } from "@/components/underline-tabs";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -197,28 +198,23 @@ export function LibraryPanel({
                 </Button>
               </ListPaneActions>
             </ListPaneTitleRow>
-            <div className="flex gap-1 border-b border-border/60">
+            <UnderlineTabs className="border-b border-border/60">
               {(
                 [
                   { id: "skills", label: "Skills" },
                   { id: "prompts", label: "Prompts" },
                 ] as const
               ).map((t) => (
-                <button
+                <UnderlineTab
                   key={t.id}
-                  type="button"
+                  active={tab === t.id}
                   onClick={() => setTab(t.id)}
-                  className={cn(
-                    "-mb-px border-b-2 px-3 py-2 text-xs font-medium transition-colors",
-                    tab === t.id
-                      ? "border-foreground text-foreground"
-                      : "border-transparent text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground",
-                  )}
+                  className="px-3"
                 >
                   {t.label}
-                </button>
+                </UnderlineTab>
               ))}
-            </div>
+            </UnderlineTabs>
           </ListPaneHeader>
 
           <ListPaneScroll className="pt-28">

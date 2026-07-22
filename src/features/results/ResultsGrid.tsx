@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { useArtifact } from "@/components/artifact/artifact-context";
+import { EmptyState } from "@/components/empty-state";
 import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -421,13 +422,12 @@ export function ResultsGrid() {
 
   if (!result) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
-        <div className="mx-auto max-w-sm space-y-3 rounded-2xl border-2 border-dashed border-muted px-6 py-10">
-          <h3 className="text-sm font-medium">No results yet</h3>
-          <p className="text-sm text-muted-foreground text-pretty">
-            Run a query from SQL, ask in chat, or list tables to get started.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-2">
+      <EmptyState
+        dashed
+        title="No results yet"
+        description="Run a query from SQL, ask in chat, or list tables to get started."
+        actions={
+          <>
             <Button
               size="sm"
               variant="secondary"
@@ -444,9 +444,9 @@ export function ResultsGrid() {
               <Play className="size-3.5" />
               List tables
             </Button>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
     );
   }
 

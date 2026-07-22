@@ -13,14 +13,13 @@ import {
   useArtifact,
   type ArtifactKind,
 } from "@/components/artifact/artifact-context";
+import { UnderlineTab, UnderlineTabs } from "@/components/underline-tabs";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ResultsChart } from "@/features/results/ResultsChart";
 import { ResultsGrid } from "@/features/results/ResultsGrid";
 import { SchemaPanel } from "@/features/schema/SchemaPanel";
 import { SqlEditor } from "@/features/sql-editor/SqlEditor";
 import { api } from "@/lib/tauri";
-import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/stores/workspace";
 
 const SWITCHABLE: ReadonlyArray<{
@@ -50,39 +49,32 @@ function OpenArtifactPane() {
   if (!artifact.open) return null;
 
   return (
-    <aside className="flex h-full w-full flex-col overflow-hidden rounded-tl-xl border-l border-t border-border/60 bg-muted/30">
-      <header className="flex shrink-0 items-end justify-between gap-1 border-b border-border/60 px-2 pt-1">
-        <nav className="flex min-w-0 flex-1 items-end gap-0.5 overflow-x-auto">
+    <aside className="@container flex h-full w-full flex-col overflow-hidden border-l border-border/60 bg-muted/30">
+      <header className="flex h-10 shrink-0 items-stretch justify-between gap-1 border-b border-border/60 px-1">
+        <UnderlineTabs>
           {SWITCHABLE.map(({ kind, label, icon: Icon }) => {
             const selected = artifact.kind === kind;
             return (
-              <button
+              <UnderlineTab
                 key={kind}
-                type="button"
+                active={selected}
                 onClick={() => {
                   if (kind !== artifact.kind) open(kind);
                 }}
-                className={cn(
-                  "inline-flex h-9 shrink-0 items-center gap-1.5 border-b-2 px-2.5 text-xs font-medium transition-colors -mb-px",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                  selected
-                    ? "border-foreground text-foreground"
-                    : "border-transparent text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground",
-                )}
-                aria-current={selected ? "page" : undefined}
                 aria-label={label}
                 title={label}
+                className="px-2"
               >
-                <Icon className="size-3.5" />
+                <Icon className="size-3.5 opacity-80" />
                 <span>{label}</span>
-              </button>
+              </UnderlineTab>
             );
           })}
-        </nav>
+        </UnderlineTabs>
         <Button
           variant="ghost"
           size="icon"
-          className="mb-1 size-7 shrink-0 rounded-lg"
+          className="my-1 size-7 shrink-0 rounded-none"
           onClick={close}
           aria-label="Close artifact pane"
         >
@@ -100,7 +92,7 @@ function OpenArtifactPane() {
           {artifact.kind === "sql" && <SqlEditor />}
           {artifact.kind === "schema" && <SchemaPanel />}
           {artifact.kind === "explain" && (
-            <ScrollArea className="h-full">
+            <div className="h-full overflow-y-auto overflow-x-hidden">
               <div className="p-3">
                 {explainPlan ? (
                   <pre className="whitespace-pre-wrap rounded-lg border border-border/60 bg-muted/40 p-3 font-mono text-xs leading-relaxed">
@@ -149,10 +141,10 @@ function OpenArtifactPane() {
                   />
                 )}
               </div>
-            </ScrollArea>
+            </div>
           )}
           {artifact.kind === "context" && (
-            <ScrollArea className="h-full">
+            <div className="h-full overflow-y-auto overflow-x-hidden">
               <div className="space-y-3 p-3">
                 {contextReport ? (
                   <>
@@ -189,7 +181,7 @@ function OpenArtifactPane() {
                   />
                 )}
               </div>
-            </ScrollArea>
+            </div>
           )}
         </div>
       </div>
