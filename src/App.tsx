@@ -32,6 +32,10 @@ import { HistoryPanel } from "@/features/history/HistoryPanel";
 import { LibraryPanel } from "@/features/library/LibraryPanel";
 import { SettingsPanel } from "@/features/settings/SettingsPanel";
 import { useActivityLogBridge } from "@/hooks/use-activity-log-bridge";
+import {
+  requestRunSql,
+  useAppShortcuts,
+} from "@/hooks/use-app-shortcuts";
 import { isDesktopRequiredError } from "@/lib/tauri";
 import { TOP_SAFE_AREA_PADDING } from "@/lib/ui";
 import { cn } from "@/lib/utils";
@@ -56,7 +60,7 @@ function AppShell() {
     agentBusy,
     running,
   } = useWorkspace();
-  const { state: artifact, toggle } = useArtifact();
+  const { state: artifact, toggle, open: openArtifact } = useArtifact();
   const active = connections.find((c) => c.id === activeConnId);
   const [activity, setActivity] = useState<ActivityId>("workspace");
   const busy = agentBusy || running;
@@ -77,6 +81,24 @@ function AppShell() {
   }, [showStatus, busy, tone, status, setStatus]);
 
   useActivityLogBridge();
+
+  useAppShortcuts({
+    toggleArtifact: () => toggle(),
+    openSettings: () => setActivity("settings"),
+    focusChat: () => {
+      setActivity("workspace");
+      window.requestAnimationFrame(() => {
+        document
+          .querySelector<HTMLTextAreaElement>("[data-chat-composer]")
+          ?.focus();
+      });
+    },
+    runSql: () => {
+      setActivity("workspace");
+      openArtifact("sql");
+      window.setTimeout(() => requestRunSql(), 50);
+    },
+  });
 
   return (
     <div

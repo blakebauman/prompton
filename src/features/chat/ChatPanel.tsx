@@ -420,6 +420,7 @@ export function ChatPanel({
           }
         >
           <PromptInputTextarea
+            data-chat-composer
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={

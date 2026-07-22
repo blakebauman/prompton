@@ -19,6 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { ShortcutsSettings } from "@/features/settings/ShortcutsSettings";
+import { UpdatesSettings } from "@/features/settings/UpdatesSettings";
 import { api, isDesktopRequiredError } from "@/lib/tauri";
 import type { ProviderKind, SkillMeta, PromptEntry } from "@/lib/types";
 import { useTheme, type ThemeMode } from "@/stores/theme";
@@ -29,6 +31,7 @@ type SettingsTab =
   | "provider"
   | "skills"
   | "prompts"
+  | "shortcuts"
   | "diagnostics"
   | "about";
 
@@ -37,6 +40,7 @@ const TABS: Array<{ id: SettingsTab; label: string }> = [
   { id: "provider", label: "Provider" },
   { id: "skills", label: "Skills" },
   { id: "prompts", label: "Prompts" },
+  { id: "shortcuts", label: "Shortcuts" },
   { id: "diagnostics", label: "Diagnostics" },
   { id: "about", label: "About" },
 ];
@@ -370,6 +374,8 @@ export function SettingsPanel() {
         </SettingSection>
       )}
 
+      {tab === "shortcuts" && <ShortcutsSettings />}
+
       {tab === "diagnostics" && (
         <div className="flex items-start gap-8">
           <div className="min-w-0 flex-1">
@@ -409,6 +415,7 @@ export function SettingsPanel() {
                 icon={Code2}
               />
             </div>
+            <UpdatesSettings />
             <SettingSection
               title="Agent context"
               description={

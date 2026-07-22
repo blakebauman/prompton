@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CircleHelp, Play, Square } from "lucide-react";
 
 import { useArtifact } from "@/components/artifact/artifact-context";
+import { KeyCapChord } from "@/components/key-cap";
 import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { RUN_SQL_EVENT } from "@/hooks/use-app-shortcuts";
 import { api } from "@/lib/tauri";
 import type { PendingConfirmation } from "@/lib/types";
+import { useShortcuts } from "@/stores/shortcuts";
 import { useWorkspace } from "@/stores/workspace";
 
 export function SqlEditor() {
@@ -24,6 +27,7 @@ export function SqlEditor() {
   } = useWorkspace();
   const { open: openArtifact } = useArtifact();
   const [pending, setPending] = useState<PendingConfirmation | null>(null);
+  const runSqlChord = useShortcuts((s) => s.bindings.runSql);
 
   const active = connections.find((c) => c.id === activeConnId);
   const isProd = !!active?.isProduction;
@@ -84,6 +88,17 @@ export function SqlEditor() {
     await executeRead();
   }
 
+  const runRef = useRef(run);
+  runRef.current = run;
+
+  useEffect(() => {
+    function onRunSql() {
+      void runRef.current();
+    }
+    window.addEventListener(RUN_SQL_EVENT, onRunSql);
+    return () => window.removeEventListener(RUN_SQL_EVENT, onRunSql);
+  }, []);
+
   async function resolvePending(approved: boolean) {
     if (!pending) return;
     const id = pending.confirmationId;
@@ -114,12 +129,19 @@ export function SqlEditor() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-2">
-        <span className="truncate px-1 text-[11px] text-muted-foreground">
-          {activeConnId
-            ? mutating
-              ? "Write · approval required"
-              : "⌘↵ run"
-            : "Select a connection to run"}
+        <span className="flex min-w-0 items-center gap-2 truncate px-1 text-[11px] text-muted-foreground">
+          {activeConnId ? (
+            mutating ? (
+              "Write · approval required"
+            ) : (
+              <>
+                <KeyCapChord keys={runSqlChord} className="scale-90" />
+                <span>run</span>
+              </>
+            )
+          ) : (
+            "Select a connection to run"
+          )}
         </span>
         <div className="flex shrink-0 items-center gap-1">
           {running && result?.queryId && (
