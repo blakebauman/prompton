@@ -20,6 +20,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/toaster";
 import {
   Tooltip,
   TooltipContent,
@@ -46,6 +47,7 @@ export default function App() {
     <TooltipProvider>
       <ArtifactProvider defaultOpen>
         <AppShell />
+        <Toaster />
       </ArtifactProvider>
     </TooltipProvider>
   );

@@ -5,6 +5,7 @@ import { KeyCapChord } from "@/components/key-cap";
 import { SettingRow, SettingSection } from "@/components/setting-row";
 import { SettingsHelpAside } from "@/components/settings-help-aside";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 import {
   SHORTCUT_DEFS,
   useShortcuts,
@@ -54,7 +55,14 @@ export function ShortcutsSettings() {
               size="sm"
               variant="ghost"
               className="h-7 text-xs text-muted-foreground"
-              onClick={resetDefaults}
+              onClick={() => {
+                resetDefaults();
+                toast({
+                  title: "Shortcuts reset",
+                  description: "Defaults restored for this machine.",
+                  tone: "success",
+                });
+              }}
             >
               Reset to defaults
             </Button>
@@ -86,6 +94,11 @@ export function ShortcutsSettings() {
           onSave={(keys) => {
             setBinding(active.id, keys);
             setEditing(null);
+            toast({
+              title: "Shortcut saved",
+              description: active.title,
+              tone: "success",
+            });
           }}
         />
       )}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 import {
   useActivityLog,
   type LogEntry,
@@ -100,7 +101,10 @@ export function LogConsole({
             size="sm"
             className="h-7 text-xs"
             disabled={entries.length === 0}
-            onClick={clear}
+            onClick={() => {
+              clear();
+              toast({ title: "Activity log cleared" });
+            }}
           >
             Clear
           </Button>

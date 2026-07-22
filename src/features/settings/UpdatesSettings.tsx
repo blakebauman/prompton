@@ -4,6 +4,7 @@ import { AlertCircle, RefreshCw } from "lucide-react";
 import { SettingRow, SettingSection } from "@/components/setting-row";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "@/hooks/use-toast";
 import { isTauri } from "@/lib/tauri";
 import { useActivityLog } from "@/stores/activity-log";
 import { useWorkspace } from "@/stores/workspace";
@@ -40,26 +41,25 @@ export function UpdatesSettings() {
     append("Checking for updates…", "info");
     try {
       if (!isTauri()) {
-        setUi({
-          kind: "unavailable",
-          message: "Updates require the desktop app.",
-        });
-        setStatus("Updates require the desktop app");
+        const message = "Updates require the desktop app.";
+        setUi({ kind: "unavailable", message });
+        setStatus(message);
+        toast({ title: "Updates unavailable", description: message });
         return;
       }
       // Updater plugin is not wired yet — surface an honest idle state.
       await new Promise((r) => window.setTimeout(r, 400));
-      setUi({
-        kind: "unavailable",
-        message: "Automatic updates aren’t enabled in this build yet.",
-      });
+      const message = "Automatic updates aren’t enabled in this build yet.";
+      setUi({ kind: "unavailable", message });
       append("Updater not configured in this build", "info");
-      setStatus("Updater not configured in this build");
+      setStatus(message);
+      toast({ title: "No updater configured", description: message });
     } catch (e) {
       const message = String(e);
       setUi({ kind: "error", message });
       append(message, "stderr");
       setStatus(message);
+      toast({ title: "Update check failed", description: message, tone: "error" });
     }
   }
 

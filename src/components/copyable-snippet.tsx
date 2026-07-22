@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 /** Title + mono snippet with copy affordance. */
@@ -22,9 +23,14 @@ export function CopyableSnippet({
     try {
       await navigator.clipboard.writeText(snippet);
       setCopied(true);
+      toast({ title: "Copied", description: title, tone: "success" });
       window.setTimeout(() => setCopied(false), 1500);
     } catch {
-      /* user can still select the pre */
+      toast({
+        title: "Couldn’t copy",
+        description: "Select the text and copy manually.",
+        tone: "error",
+      });
     }
   }
 

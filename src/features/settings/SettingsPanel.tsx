@@ -21,6 +21,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ShortcutsSettings } from "@/features/settings/ShortcutsSettings";
 import { UpdatesSettings } from "@/features/settings/UpdatesSettings";
+import { toast } from "@/hooks/use-toast";
 import { api, isDesktopRequiredError } from "@/lib/tauri";
 import type { ProviderKind, SkillMeta, PromptEntry } from "@/lib/types";
 import { useTheme, type ThemeMode } from "@/stores/theme";
@@ -233,6 +234,11 @@ export function SettingsPanel() {
                         apiKey || undefined,
                       );
                       setStatus("Agent settings saved");
+                      toast({
+                        title: "Provider saved",
+                        description: `${kind} · ${model}`,
+                        tone: "success",
+                      });
                     })()
                   }
                 >
