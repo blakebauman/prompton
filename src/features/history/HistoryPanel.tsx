@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Bot, Database, History, Trash2 } from "lucide-react";
+import { Bot, Copy, Database, History, Trash2 } from "lucide-react";
 
 import { useArtifact } from "@/components/artifact/artifact-context";
 import {
@@ -22,6 +22,7 @@ import {
   ListPaneTitleRow,
 } from "@/components/list-pane";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 import { formatWhen } from "@/lib/format";
 import { api, isDesktopRequiredError, onEvent } from "@/lib/tauri";
 import type { HistoryEntry, HistoryKind } from "@/lib/types";
@@ -211,22 +212,37 @@ export function HistoryPanel({
                 <DetailPaneTitle>{selected.title}</DetailPaneTitle>
               </div>
               <DetailPaneActions>
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(selected.body).then(
+                      () => toast({ title: "Copied", tone: "success" }),
+                      () =>
+                        toast({ title: "Couldn’t copy", tone: "error" }),
+                    );
+                  }}
+                >
+                  <Copy className="size-3.5" />
+                  Copy
+                </Button>
                 {selected.kind === "query" && (
                   <Button
-                    size="sm"
+                    size="xs"
                     variant="secondary"
                     onClick={() => {
                       setSql(selected.body);
                       openArtifact("sql");
                       onOpenWorkspace?.();
                       setStatus("SQL loaded from history");
+                      toast({ title: "SQL loaded", tone: "success" });
                     }}
                   >
                     Load SQL
                   </Button>
                 )}
                 <Button
-                  size="sm"
+                  size="xs"
                   variant="ghost"
                   aria-label="Delete"
                   onClick={() => void remove(selected.id)}

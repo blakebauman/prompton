@@ -1,12 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import { CircleHelp, Play, Square } from "lucide-react";
+import {
+  AlignLeft,
+  CircleHelp,
+  Copy,
+  Play,
+  Square,
+} from "lucide-react";
 
 import { useArtifact } from "@/components/artifact/artifact-context";
 import { KeyCapChord } from "@/components/key-cap";
 import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/use-toast";
 import { RUN_SQL_EVENT } from "@/hooks/use-app-shortcuts";
+import { formatSql } from "@/lib/format-sql";
 import { api } from "@/lib/tauri";
 import type { PendingConfirmation } from "@/lib/types";
 import { useShortcuts } from "@/stores/shortcuts";
@@ -48,9 +56,12 @@ export function SqlEditor() {
       });
       setResult(page);
       openArtifact("results");
-      setStatus(`Done · ${page.totalRows} rows · ${page.durationMs}ms`);
+      const msg = `Done · ${page.totalRows} rows · ${page.durationMs}ms`;
+      setStatus(msg);
+      toast({ title: "Query finished", description: msg, tone: "success" });
     } catch (e) {
       setStatus(String(e));
+      toast({ title: "Query failed", description: String(e), tone: "error" });
     } finally {
       setRunning(false);
     }
@@ -66,8 +77,10 @@ export function SqlEditor() {
       setExplainPlan(plan);
       openArtifact("explain");
       setStatus("Explain plan ready");
+      toast({ title: "Explain ready", tone: "success" });
     } catch (e) {
       setStatus(String(e));
+      toast({ title: "Explain failed", description: String(e), tone: "error" });
     }
   }
 
@@ -126,24 +139,52 @@ export function SqlEditor() {
     }
   }
 
+  async function copySql() {
+    if (!sql.trim()) return;
+    try {
+      await navigator.clipboard.writeText(sql);
+      toast({ title: "SQL copied", tone: "success" });
+    } catch {
+      toast({ title: "Couldn’t copy SQL", tone: "error" });
+    }
+  }
+
+  function onFormat() {
+    const next = formatSql(sql);
+    if (next === sql.trim()) {
+      toast({ title: "Already formatted" });
+      return;
+    }
+    setSql(next);
+    toast({ title: "SQL formatted", tone: "success" });
+  }
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-2">
         <span className="flex min-w-0 items-center gap-2 truncate px-1 text-[11px] text-muted-foreground">
           {activeConnId ? (
-            mutating ? (
-              "Write · approval required"
-            ) : (
-              <>
-                <KeyCapChord keys={runSqlChord} className="scale-90" />
-                <span>run</span>
-              </>
-            )
+            <>
+              <span className="truncate font-medium text-foreground">
+                {active?.name ?? "Connection"}
+              </span>
+              <span aria-hidden>·</span>
+              <span className="capitalize">{active?.dialect ?? "sql"}</span>
+              <span aria-hidden>·</span>
+              {mutating ? (
+                <span className="text-destructive">Write · approval</span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5">
+                  <KeyCapChord keys={runSqlChord} className="scale-90" />
+                  <span>run</span>
+                </span>
+              )}
+            </>
           ) : (
             "Select a connection to run"
           )}
         </span>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-0.5">
           {running && result?.queryId && (
             <Button
               size="xs"
@@ -157,8 +198,26 @@ export function SqlEditor() {
           <Button
             size="xs"
             variant="ghost"
+            disabled={!sql.trim()}
+            onClick={() => void copySql()}
+          >
+            <Copy className="size-3.5" />
+            Copy
+          </Button>
+          <Button
+            size="xs"
+            variant="ghost"
+            disabled={!sql.trim()}
+            onClick={onFormat}
+          >
+            <AlignLeft className="size-3.5" />
+            Format
+          </Button>
+          <Button
+            size="xs"
+            variant="ghost"
             onClick={() => void explain()}
-            disabled={running || !activeConnId}
+            disabled={running || !activeConnId || !sql.trim()}
           >
             <CircleHelp className="size-3.5" />
             Explain
@@ -167,16 +226,17 @@ export function SqlEditor() {
             size="xs"
             variant={mutating ? "destructive" : "default"}
             onClick={() => void run()}
-            disabled={running || !activeConnId}
+            disabled={running || !activeConnId || !sql.trim()}
           >
             <Play className="size-3.5" />
-            {mutating ? "Review & run" : "Run"}
+            {mutating ? "Review" : "Run"}
           </Button>
         </div>
       </div>
       <Textarea
         value={sql}
         onChange={(e) => setSql(e.target.value)}
+        placeholder="SELECT …"
         className="min-h-0 flex-1 resize-none rounded-none border-0 bg-transparent font-mono text-sm shadow-none focus-visible:ring-0 focus-visible:shadow-[inset_3px_0_0_0_var(--foreground)]"
         spellCheck={false}
         onKeyDown={(e) => {

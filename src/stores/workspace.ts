@@ -39,6 +39,8 @@ interface WorkspaceState {
   setContextReport: (r: BudgetReport | null) => void;
   setExplainPlan: (plan: string | null) => void;
   setStatus: (s: string) => void;
+  /** Clear the chat thread without wiping SQL results / explain. */
+  clearChat: () => void;
   resetChatForConnection: () => void;
 }
 
@@ -89,6 +91,20 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
   setContextReport: (contextReport) => set({ contextReport }),
   setExplainPlan: (explainPlan) => set({ explainPlan }),
   setStatus: (status) => set({ status }),
+  clearChat: () =>
+    set({
+      sessionId: null,
+      agentBusy: false,
+      pendingConfirm: null,
+      contextReport: null,
+      messages: [
+        {
+          id: "welcome",
+          role: "assistant",
+          content: "New chat. Ask a question or run SQL.",
+        },
+      ],
+    }),
   resetChatForConnection: () =>
     set({
       sessionId: null,

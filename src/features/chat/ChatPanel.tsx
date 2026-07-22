@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import {
+  Copy,
   DatabaseIcon,
   Lock,
+  MessageSquarePlus,
   Server,
   Settings2,
   SquareIcon,
@@ -15,6 +17,8 @@ import {
 } from "@/components/ai-elements/conversation";
 import {
   Message,
+  MessageAction,
+  MessageActions,
   MessageContent,
   MessageResponse,
 } from "@/components/ai-elements/message";
@@ -42,6 +46,7 @@ import { useArtifact } from "@/components/artifact/artifact-context";
 import { SetupChecklist } from "@/components/setup-checklist";
 import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 import { abandonConnectionWork, isCurrentAgentSession } from "@/lib/session";
 import { api, onEvent } from "@/lib/tauri";
 import type { ChatMessage, PendingConfirmation, QueryPage } from "@/lib/types";
@@ -77,6 +82,7 @@ export function ChatPanel({
     setConnections,
     setActiveConnId,
     setSchemas,
+    clearChat,
   } = useWorkspace();
   const { open: openArtifact } = useArtifact();
   const [input, setInput] = useState("");
@@ -303,25 +309,42 @@ export function ChatPanel({
   return (
     <div className="relative flex h-full flex-col overflow-hidden">
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-gradient-to-b from-background to-transparent" />
-      <div className="relative z-20 flex h-10 shrink-0 items-center justify-between px-4">
+      <div className="relative z-20 flex h-10 shrink-0 items-center justify-between gap-2 px-4">
         <div className="flex items-center gap-2">
           {agentBusy && <ActivityPulse mode="busy" />}
           <h2 className="text-base font-bold tracking-tight">Chat</h2>
         </div>
-        {agentBusy && (
-          <Button
-            size="xs"
-            variant="ghost"
-            className="pointer-events-auto -mr-1"
-            onClick={() => {
-              if (sessionId) void api.agentCancel(sessionId);
-              setAgentBusy(false);
-            }}
-          >
-            <SquareIcon className="size-3.5" />
-            Stop
-          </Button>
-        )}
+        <div className="pointer-events-auto flex items-center gap-0.5">
+          {agentBusy && (
+            <Button
+              size="xs"
+              variant="ghost"
+              onClick={() => {
+                if (sessionId) void api.agentCancel(sessionId);
+                setAgentBusy(false);
+              }}
+            >
+              <SquareIcon className="size-3.5" />
+              Stop
+            </Button>
+          )}
+          {activeConnId && !showEmpty && (
+            <Button
+              size="xs"
+              variant="ghost"
+              disabled={agentBusy}
+              onClick={() => {
+                if (sessionId) void api.agentCancel(sessionId);
+                clearChat();
+                setStatus("New chat");
+                toast({ title: "Chat cleared" });
+              }}
+            >
+              <MessageSquarePlus className="size-3.5" />
+              New
+            </Button>
+          )}
+        </div>
       </div>
 
       <Conversation className="min-h-0">
@@ -557,6 +580,17 @@ function ChatBubble({ message }: { message: ChatMessage }) {
   }
 
   const from = message.role === "user" ? "user" : "assistant";
+  const canCopy = message.content.trim().length > 0;
+
+  async function copyMessage() {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      toast({ title: "Copied", tone: "success" });
+    } catch {
+      toast({ title: "Couldn’t copy", tone: "error" });
+    }
+  }
+
   return (
     <Message from={from} className="gap-1.5">
       <MessageContent
@@ -572,6 +606,24 @@ function ChatBubble({ message }: { message: ChatMessage }) {
           <div className="whitespace-pre-wrap">{message.content}</div>
         )}
       </MessageContent>
+      {canCopy && (
+        <MessageActions
+          className={
+            from === "user"
+              ? "justify-end opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+              : "opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+          }
+        >
+          <MessageAction
+            tooltip="Copy"
+            label="Copy message"
+            size="icon-xs"
+            onClick={() => void copyMessage()}
+          >
+            <Copy className="size-3.5" />
+          </MessageAction>
+        </MessageActions>
+      )}
     </Message>
   );
 }
