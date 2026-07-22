@@ -194,7 +194,6 @@ export function SettingsPanel() {
                   </Select>
                 ) : (
                   <Input
-                    className="h-8"
                     value={model}
                     onChange={(e) => setModel(e.target.value)}
                   />
@@ -202,7 +201,6 @@ export function SettingsPanel() {
               </SettingRow>
               <SettingRow title="Base URL">
                 <Input
-                  className="h-8"
                   value={baseUrl}
                   onChange={(e) => setBaseUrl(e.target.value)}
                 />
@@ -212,7 +210,6 @@ export function SettingsPanel() {
                 description="Leave blank to keep the existing keyring value."
               >
                 <Input
-                  className="h-8"
                   type="password"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
@@ -305,13 +302,11 @@ export function SettingsPanel() {
           )}
           <div className="space-y-2 py-2">
             <Input
-              className="h-8"
               placeholder="skill-name"
               value={skillName}
               onChange={(e) => setSkillName(e.target.value)}
             />
             <Input
-              className="h-8"
               placeholder="description"
               value={skillDesc}
               onChange={(e) => setSkillDesc(e.target.value)}
@@ -354,7 +349,6 @@ export function SettingsPanel() {
           )}
           <div className="space-y-2 py-2">
             <Input
-              className="h-8"
               placeholder="Title"
               value={promptTitle}
               onChange={(e) => setPromptTitle(e.target.value)}

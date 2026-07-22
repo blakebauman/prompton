@@ -184,7 +184,7 @@ export function ResultsChart() {
           value={activeCategory}
           onValueChange={(v) => setCategoryCol(v)}
         >
-          <SelectTrigger className="h-7 w-[140px] text-xs">
+          <SelectTrigger size="sm" className="w-[140px]">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>

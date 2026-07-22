@@ -464,7 +464,6 @@ export function ConnectionsPanel() {
             <div className="grid gap-1.5">
               <Label className="text-xs">Name</Label>
               <Input
-                className="h-8"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
@@ -473,7 +472,6 @@ export function ConnectionsPanel() {
               <div className="grid gap-1.5">
                 <Label className="text-xs">File path</Label>
                 <Input
-                  className="h-8"
                   placeholder="/path/to/database.db"
                   value={form.filePath}
                   onChange={(e) =>
@@ -487,7 +485,6 @@ export function ConnectionsPanel() {
                   <div className="col-span-2 grid gap-1.5">
                     <Label className="text-xs">Host</Label>
                     <Input
-                      className="h-8"
                       value={form.host}
                       onChange={(e) =>
                         setForm({ ...form, host: e.target.value })
@@ -497,7 +494,6 @@ export function ConnectionsPanel() {
                   <div className="grid gap-1.5">
                     <Label className="text-xs">Port</Label>
                     <Input
-                      className="h-8"
                       value={form.port}
                       onChange={(e) =>
                         setForm({ ...form, port: e.target.value })
@@ -508,7 +504,6 @@ export function ConnectionsPanel() {
                 <div className="grid gap-1.5">
                   <Label className="text-xs">Database</Label>
                   <Input
-                    className="h-8"
                     value={form.database}
                     onChange={(e) =>
                       setForm({ ...form, database: e.target.value })
@@ -519,7 +514,6 @@ export function ConnectionsPanel() {
                   <div className="grid gap-1.5">
                     <Label className="text-xs">User</Label>
                     <Input
-                      className="h-8"
                       value={form.username}
                       onChange={(e) =>
                         setForm({ ...form, username: e.target.value })
@@ -529,7 +523,6 @@ export function ConnectionsPanel() {
                   <div className="grid gap-1.5">
                     <Label className="text-xs">Password</Label>
                     <Input
-                      className="h-8"
                       type="password"
                       value={form.password}
                       onChange={(e) =>

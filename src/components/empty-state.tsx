@@ -21,16 +21,16 @@ export function EmptyState({
   const inner = (
     <>
       {icon && (
-        <div className="mb-2 text-muted-foreground opacity-50">{icon}</div>
+        <div className="mb-2.5 text-muted-foreground/55">{icon}</div>
       )}
-      <h3 className="text-sm font-medium">{title}</h3>
+      <h3 className="text-sm font-medium tracking-tight">{title}</h3>
       {description && (
-        <p className="mt-1 max-w-sm text-sm text-muted-foreground text-pretty">
+        <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground text-pretty">
           {description}
         </p>
       )}
       {actions && (
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+        <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2">
           {actions}
         </div>
       )}
@@ -40,12 +40,12 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex h-full min-h-[220px] flex-col items-center justify-center p-8 text-center",
+        "flex h-full min-h-[200px] flex-col items-center justify-center p-6 text-center",
         className,
       )}
     >
       {dashed ? (
-        <div className="mx-auto w-full max-w-sm rounded-lg border border-dashed border-muted-foreground/30 px-6 py-10">
+        <div className="mx-auto w-full max-w-sm rounded-lg border border-dashed border-border/70 bg-muted/10 px-5 py-8">
           {inner}
         </div>
       ) : (
