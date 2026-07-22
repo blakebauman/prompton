@@ -38,9 +38,8 @@ export function ShortcutsSettings() {
                   <KeyCapChord keys={bindings[def.id] ?? []} />
                   <Button
                     type="button"
-                    size="sm"
+                    size="xs"
                     variant="outline"
-                    className="h-7 text-xs"
                     onClick={() => setEditing(def.id)}
                   >
                     Change
@@ -52,9 +51,8 @@ export function ShortcutsSettings() {
           <div className="py-3">
             <Button
               type="button"
-              size="sm"
+              size="xs"
               variant="ghost"
-              className="h-7 text-xs text-muted-foreground"
               onClick={() => {
                 resetDefaults();
                 toast({

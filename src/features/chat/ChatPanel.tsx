@@ -309,9 +309,9 @@ export function ChatPanel({
         </div>
         {agentBusy && (
           <Button
-            size="sm"
+            size="xs"
             variant="ghost"
-            className="pointer-events-auto -mr-1 h-7 px-2"
+            className="pointer-events-auto -mr-1"
             onClick={() => {
               if (sessionId) void api.agentCancel(sessionId);
               setAgentBusy(false);
@@ -341,7 +341,7 @@ export function ChatPanel({
                     action: (
                       <div className="flex flex-wrap gap-2">
                         <Button
-                          size="sm"
+                          size="xs"
                           onClick={() => void connectDemo()}
                         >
                           Open demo SQLite
@@ -358,8 +358,8 @@ export function ChatPanel({
                     icon: <Server className="size-3.5" />,
                     action: onOpenSettings ? (
                       <Button
-                        size="sm"
-                        variant="secondary"
+                        size="xs"
+                        variant="outline"
                         onClick={onOpenSettings}
                       >
                         <Settings2 className="size-3.5" />

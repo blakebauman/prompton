@@ -43,9 +43,8 @@ export function ExpandableClamp({
         <div className="mt-2 flex justify-center">
           <Button
             type="button"
-            size="sm"
+            size="xs"
             variant="ghost"
-            className="h-7 text-xs text-muted-foreground"
             onClick={() => setExpanded((v) => !v)}
           >
             {expanded ? "Show less" : "Show more"}

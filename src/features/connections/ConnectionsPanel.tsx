@@ -218,24 +218,22 @@ export function ConnectionsPanel() {
           <ListPaneTitle>Connections</ListPaneTitle>
           <ListPaneActions>
             <Button
-              size="sm"
+              size="icon-xs"
               variant="ghost"
-              className="size-7 p-0"
               title="Open schema"
               aria-label="Open schema"
               disabled={!activeConnId}
               onClick={() => openArtifact("schema")}
             >
-              <Network className="size-4" />
+              <Network className="size-3.5" />
             </Button>
             <Button
-              size="sm"
+              size="icon-xs"
               variant="ghost"
-              className="size-7 p-0"
               aria-label="Add connection"
               onClick={() => setOpen(true)}
             >
-              <Plus className="size-4" />
+              <Plus className="size-3.5" />
             </Button>
           </ListPaneActions>
         </ListPaneTitleRow>
@@ -263,7 +261,7 @@ export function ConnectionsPanel() {
                   </Button>
                   <Button
                     size="sm"
-                    variant="secondary"
+                    variant="outline"
                     onClick={() => void connectDemo()}
                   >
                     Open demo SQLite
@@ -323,9 +321,9 @@ export function ConnectionsPanel() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
-                      size="icon"
+                      size="icon-xs"
                       variant="ghost"
-                      className="absolute top-2 right-2 size-7 opacity-60 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100"
+                      className="absolute top-2 right-2 opacity-60 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100"
                       aria-label={`Actions for ${c.name}`}
                     >
                       <MoreHorizontal className="size-3.5" />

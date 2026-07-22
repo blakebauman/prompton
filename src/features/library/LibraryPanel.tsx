@@ -220,9 +220,8 @@ export function LibraryPanel({
               <ListPaneTitle>Library</ListPaneTitle>
               <ListPaneActions>
                 <Button
-                  size="sm"
+                  size="xs"
                   variant="ghost"
-                  className="h-7 px-2"
                   onClick={openCreate}
                   aria-label={tab === "skills" ? "New skill" : "New prompt"}
                 >

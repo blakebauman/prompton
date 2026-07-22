@@ -74,12 +74,12 @@ function OpenArtifactPane() {
         </UnderlineTabs>
         <Button
           variant="ghost"
-          size="icon"
-          className="my-1 size-7 shrink-0 rounded-none"
+          size="icon-xs"
+          className="my-1 shrink-0 rounded-none"
           onClick={close}
           aria-label="Close artifact pane"
         >
-          <X className="size-4" />
+          <X className="size-3.5" />
         </Button>
       </header>
 
@@ -109,7 +109,7 @@ function OpenArtifactPane() {
                       <>
                         <Button
                           size="sm"
-                          variant="secondary"
+                          variant="outline"
                           onClick={() => open("sql")}
                         >
                           <FileCode2 className="size-3.5" />
@@ -117,6 +117,7 @@ function OpenArtifactPane() {
                         </Button>
                         <Button
                           size="sm"
+                          variant="secondary"
                           disabled={!activeConnId || !sql.trim()}
                           onClick={() =>
                             void (async () => {

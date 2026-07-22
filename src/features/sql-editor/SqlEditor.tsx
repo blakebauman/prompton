@@ -146,7 +146,7 @@ export function SqlEditor() {
         <div className="flex shrink-0 items-center gap-1">
           {running && result?.queryId && (
             <Button
-              size="sm"
+              size="xs"
               variant="ghost"
               onClick={() => void api.cancelQuery(result.queryId)}
             >
@@ -155,7 +155,7 @@ export function SqlEditor() {
             </Button>
           )}
           <Button
-            size="sm"
+            size="xs"
             variant="ghost"
             onClick={() => void explain()}
             disabled={running || !activeConnId}
@@ -164,7 +164,7 @@ export function SqlEditor() {
             Explain
           </Button>
           <Button
-            size="sm"
+            size="xs"
             variant={mutating ? "destructive" : "default"}
             onClick={() => void run()}
             disabled={running || !activeConnId}

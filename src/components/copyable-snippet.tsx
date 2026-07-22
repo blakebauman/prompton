@@ -47,9 +47,9 @@ export function CopyableSnippet({
         </div>
         <Button
           type="button"
-          size="sm"
+          size="xs"
           variant="outline"
-          className="h-7 shrink-0 gap-1.5 px-2.5 text-xs"
+          className="shrink-0"
           onClick={() => void copy()}
         >
           {copied ? (

@@ -430,7 +430,7 @@ export function ResultsGrid() {
           <>
             <Button
               size="sm"
-              variant="secondary"
+              variant="outline"
               onClick={() => openArtifact("sql")}
             >
               <FileCode2 className="size-3.5" />
@@ -438,6 +438,7 @@ export function ResultsGrid() {
             </Button>
             <Button
               size="sm"
+              variant="secondary"
               disabled={!activeConnId || running}
               onClick={() => void runSample()}
             >

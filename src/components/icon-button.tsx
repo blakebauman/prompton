@@ -1,31 +1,29 @@
-import type { ButtonHTMLAttributes, ComponentType } from "react";
+import type { ComponentProps, ComponentType } from "react";
 
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+type IconButtonProps = Omit<ComponentProps<typeof Button>, "size" | "children"> & {
   icon: ComponentType<{ className?: string }>;
 };
 
-/** Compact circular icon control for dense toolbars and list rows. */
+/** Compact square icon control for dense toolbars and list rows. */
 export function IconButton({
   className,
   icon: Icon,
+  variant = "ghost",
   type = "button",
   ...props
 }: IconButtonProps) {
   return (
-    <button
+    <Button
       type={type}
-      className={cn(
-        "flex size-7 shrink-0 items-center justify-center rounded-full",
-        "transition-colors hover:bg-muted",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-        "disabled:pointer-events-none disabled:opacity-50",
-        className,
-      )}
+      variant={variant}
+      size="icon-xs"
+      className={cn("text-muted-foreground", className)}
       {...props}
     >
-      <Icon className="size-3.5 text-muted-foreground" />
-    </button>
+      <Icon className="size-3.5" />
+    </Button>
   );
 }

@@ -83,8 +83,7 @@ export function LogConsole({
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              className="h-7 text-xs"
+              size="xs"
               onClick={() => {
                 setAutoScroll(true);
                 containerRef.current?.scrollTo({
@@ -98,8 +97,7 @@ export function LogConsole({
           <Button
             type="button"
             variant="outline"
-            size="sm"
-            className="h-7 text-xs"
+            size="xs"
             disabled={entries.length === 0}
             onClick={() => {
               clear();

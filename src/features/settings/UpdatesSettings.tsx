@@ -82,9 +82,8 @@ export function UpdatesSettings() {
         action={
           <Button
             type="button"
-            size="sm"
+            size="xs"
             variant="outline"
-            className="h-7 gap-1.5 text-xs"
             disabled={ui.kind === "checking"}
             onClick={() => void checkForUpdates()}
           >

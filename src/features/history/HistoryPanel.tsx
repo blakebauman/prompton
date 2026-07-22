@@ -116,9 +116,8 @@ export function HistoryPanel({
               {entries.length > 0 && (
                 <ListPaneActions>
                   <Button
-                    size="sm"
+                    size="xs"
                     variant="ghost"
-                    className="h-7 px-2 text-xs text-muted-foreground"
                     onClick={() => void clearAll()}
                   >
                     Clear

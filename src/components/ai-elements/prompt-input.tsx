@@ -126,8 +126,9 @@ export function PromptInputSubmit({
   const busy = status === "submitted" || status === "streaming";
   return (
     <Button
-      className={cn("gap-1.5", className)}
-      size="sm"
+      className={cn(className)}
+      size="icon-xs"
+      variant={busy ? "secondary" : "default"}
       type="submit"
       {...props}
     >

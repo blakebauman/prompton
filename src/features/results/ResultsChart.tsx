@@ -164,18 +164,16 @@ export function ResultsChart() {
       <div className="flex h-9 shrink-0 flex-wrap items-center gap-1.5 border-b border-border/60 px-2">
         <div className="flex items-center gap-0.5">
           <Button
-            size="sm"
+            size="xs"
             variant={chartKind === "bar" ? "secondary" : "ghost"}
-            className="h-7 px-2"
             onClick={() => setChartKind("bar")}
           >
             <BarChart3 className="size-3.5" />
             Bar
           </Button>
           <Button
-            size="sm"
+            size="xs"
             variant={chartKind === "line" ? "secondary" : "ghost"}
-            className="h-7 px-2"
             onClick={() => setChartKind("line")}
           >
             <ChartLine className="size-3.5" />
