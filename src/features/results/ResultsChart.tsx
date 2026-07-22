@@ -158,11 +158,12 @@ export function ResultsChart() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border/60 px-3 py-2">
-        <div className="flex items-center gap-1">
+      <div className="flex h-9 shrink-0 flex-wrap items-center gap-1.5 border-b border-border/60 px-2">
+        <div className="flex items-center gap-0.5">
           <Button
             size="sm"
             variant={chartKind === "bar" ? "secondary" : "ghost"}
+            className="h-7 px-2"
             onClick={() => setChartKind("bar")}
           >
             <BarChart3 className="size-3.5" />
@@ -171,6 +172,7 @@ export function ResultsChart() {
           <Button
             size="sm"
             variant={chartKind === "line" ? "secondary" : "ghost"}
+            className="h-7 px-2"
             onClick={() => setChartKind("line")}
           >
             <ChartLine className="size-3.5" />
@@ -181,7 +183,7 @@ export function ResultsChart() {
           value={activeCategory}
           onValueChange={(v) => setCategoryCol(v)}
         >
-          <SelectTrigger className="h-8 w-[160px]">
+          <SelectTrigger className="h-7 w-[140px] text-xs">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>

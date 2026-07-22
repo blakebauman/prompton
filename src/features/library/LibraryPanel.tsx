@@ -309,15 +309,16 @@ export function LibraryPanel({
       </div>
 
       <div className="relative min-w-0 flex-1 overflow-hidden border-l border-border/60">
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-14 bg-gradient-to-b from-background to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-16 bg-gradient-to-b from-background to-transparent" />
         {hasSelection ? (
           <>
-            <div className="relative z-20 flex items-start justify-between gap-3 px-6 pt-5 pb-2">
+            <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 px-6 pt-5">
               <div className="min-w-0">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <p className="text-[11px] text-muted-foreground">
                   {tab === "skills" ? "Skill" : "Prompt"}
+                  {dirty ? " · unsaved" : ""}
                 </p>
-                <h2 className="mt-1 truncate text-2xl font-bold tracking-tight">
+                <h2 className="mt-1 truncate text-xl font-bold tracking-tight">
                   {tab === "skills"
                     ? selectedSkill
                     : promptTitle || "Untitled prompt"}
@@ -331,7 +332,7 @@ export function LibraryPanel({
                 {saving ? "Saving…" : dirty ? "Save" : "Saved"}
               </Button>
             </div>
-            <div className="h-[calc(100%-5rem)] space-y-3 overflow-y-auto px-6 pb-8">
+            <div className="h-full space-y-3 overflow-y-auto px-6 pt-20 pb-8">
               {tab === "skills" ? (
                 <>
                   <Input
@@ -379,12 +380,12 @@ export function LibraryPanel({
           </>
         ) : (
           <>
-            <div className="relative z-20 px-6 pt-5 pb-2">
-              <h2 className="text-2xl font-bold tracking-tight">
+            <div className="absolute inset-x-0 top-0 z-20 px-6 pt-5">
+              <h2 className="text-xl font-bold tracking-tight">
                 {tab === "skills" ? "Skill" : "Prompt"}
               </h2>
             </div>
-            <div className="px-6 pb-8">
+            <div className="h-full px-6 pt-16">
               <EmptyState
                 title="Select an item"
                 description="Pick a skill or prompt from the list, or create a new one."

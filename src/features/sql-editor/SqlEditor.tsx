@@ -113,40 +113,49 @@ export function SqlEditor() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-9 shrink-0 items-center justify-end gap-1 border-b border-border/60 px-2">
-        {running && result?.queryId && (
+      <div className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-2">
+        <span className="truncate px-1 text-[11px] text-muted-foreground">
+          {activeConnId
+            ? mutating
+              ? "Write · approval required"
+              : "⌘↵ run"
+            : "Select a connection to run"}
+        </span>
+        <div className="flex shrink-0 items-center gap-1">
+          {running && result?.queryId && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => void api.cancelQuery(result.queryId)}
+            >
+              <Square className="size-3.5" />
+              Cancel
+            </Button>
+          )}
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => void api.cancelQuery(result.queryId)}
+            onClick={() => void explain()}
+            disabled={running || !activeConnId}
           >
-            <Square className="size-3.5" />
-            Cancel
+            <CircleHelp className="size-3.5" />
+            Explain
           </Button>
-        )}
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => void explain()}
-          disabled={running}
-        >
-          <CircleHelp className="size-3.5" />
-          Explain
-        </Button>
-        <Button
-          size="sm"
-          variant={mutating ? "destructive" : "default"}
-          onClick={() => void run()}
-          disabled={running}
-        >
-          <Play className="size-3.5" />
-          {mutating ? "Review & run" : "Run"}
-        </Button>
+          <Button
+            size="sm"
+            variant={mutating ? "destructive" : "default"}
+            onClick={() => void run()}
+            disabled={running || !activeConnId}
+          >
+            <Play className="size-3.5" />
+            {mutating ? "Review & run" : "Run"}
+          </Button>
+        </div>
       </div>
       <Textarea
         value={sql}
         onChange={(e) => setSql(e.target.value)}
-        className="min-h-0 flex-1 resize-none rounded-none border-0 font-mono text-sm shadow-none focus-visible:ring-0 focus-visible:shadow-[inset_3px_0_0_0_var(--ring)]"
+        className="min-h-0 flex-1 resize-none rounded-none border-0 bg-transparent font-mono text-sm shadow-none focus-visible:ring-0 focus-visible:shadow-[inset_3px_0_0_0_var(--foreground)]"
         spellCheck={false}
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {

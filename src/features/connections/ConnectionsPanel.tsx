@@ -260,7 +260,7 @@ export function ConnectionsPanel() {
                 <button
                   type="button"
                   className={cn(
-                    "w-full rounded-lg border p-3 text-left transition-colors",
+                    "w-full rounded-md border p-2.5 text-left transition-colors",
                     active
                       ? "border-border bg-muted/70"
                       : "border-transparent hover:bg-muted/30",
@@ -272,8 +272,8 @@ export function ConnectionsPanel() {
                       className={cn(
                         "size-2 shrink-0 rounded-full",
                         c.connected
-                          ? "ring-2 ring-emerald-500/35"
-                          : "opacity-40",
+                          ? "ring-2 ring-foreground/25"
+                          : "opacity-35",
                       )}
                       style={{ background: c.color }}
                       title={c.connected ? "Connected" : "Disconnected"}
@@ -282,16 +282,13 @@ export function ConnectionsPanel() {
                       {c.name}
                     </span>
                   </div>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 pl-4">
-                    <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                      {c.dialect}
-                    </span>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-4 text-[11px] text-muted-foreground">
+                    <span className="capitalize">{c.dialect}</span>
                     {c.isProduction && (
                       <ProdBadge compact unlocked={!!c.adminWritesUnlocked} />
                     )}
-                  </div>
-                  <div className="mt-1 truncate pl-4 text-[11px] leading-snug text-muted-foreground">
-                    {c.summary}
+                    <span aria-hidden>·</span>
+                    <span className="truncate">{c.summary}</span>
                   </div>
                 </button>
 

@@ -2,8 +2,8 @@ import { ChevronRight, RefreshCw, Table2 } from "lucide-react";
 import { useState } from "react";
 
 import { useArtifact } from "@/components/artifact/artifact-context";
+import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { api } from "@/lib/tauri";
 import { useWorkspace } from "@/stores/workspace";
 
@@ -36,40 +36,40 @@ export function SchemaPanel() {
 
   if (!activeConnId) {
     return (
-      <div className="flex h-full min-h-[220px] flex-col items-center justify-center gap-1 p-8 text-center">
-        <h3 className="text-sm font-medium">No connection</h3>
-        <p className="max-w-xs text-sm text-muted-foreground text-pretty">
-          Select a connection to browse schemas and tables.
-        </p>
-      </div>
+      <EmptyState
+        title="No connection"
+        description="Select a connection to browse schemas and tables."
+      />
     );
   }
 
   if (schemas.length === 0) {
     return (
-      <div className="flex h-full min-h-[220px] flex-col items-center justify-center gap-3 p-8 text-center">
-        <div className="max-w-xs space-y-1">
-          <h3 className="text-sm font-medium">No schema loaded</h3>
-          <p className="text-sm text-muted-foreground text-pretty">
-            Refresh schemas, or ask the agent to inspect them.
-          </p>
-        </div>
-        <Button
-          size="sm"
-          variant="secondary"
-          disabled={refreshing}
-          onClick={() => void refreshSchemas()}
-        >
-          <RefreshCw className="size-3.5" />
-          Refresh schemas
-        </Button>
-      </div>
+      <EmptyState
+        dashed
+        title="No schema loaded"
+        description="Refresh schemas, or ask the agent to inspect them."
+        actions={
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={refreshing}
+            onClick={() => void refreshSchemas()}
+          >
+            <RefreshCw className="size-3.5" />
+            Refresh schemas
+          </Button>
+        }
+      />
     );
   }
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-9 shrink-0 items-center justify-end border-b border-border/60 px-2">
+      <div className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-2">
+        <span className="truncate px-1 text-[11px] text-muted-foreground">
+          {schemas.length} schema{schemas.length === 1 ? "" : "s"}
+        </span>
         <Button
           size="sm"
           variant="ghost"
@@ -80,16 +80,16 @@ export function SchemaPanel() {
           Refresh
         </Button>
       </div>
-      <ScrollArea className="flex-1">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
         <div className="p-2 text-sm">
           {schemas.map((schema) => {
             const key = schema.name;
             const isOpen = expanded[key] ?? true;
             return (
-              <div key={key} className="mb-1">
+              <div key={key} className="mb-0.5">
                 <button
                   type="button"
-                  className="flex w-full items-center gap-1 rounded-md px-1.5 py-1.5 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                  className="flex w-full items-center gap-1 rounded-md px-1.5 py-1.5 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:bg-muted/40"
                   onClick={() =>
                     setExpanded((e) => ({ ...e, [key]: !isOpen }))
                   }
@@ -107,7 +107,7 @@ export function SchemaPanel() {
                     <button
                       key={`${schema.name}.${table.name}`}
                       type="button"
-                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 pl-6 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 pl-6 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:bg-muted/40"
                       onClick={() =>
                         void (async () => {
                           try {
@@ -156,7 +156,7 @@ export function SchemaPanel() {
             );
           })}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
