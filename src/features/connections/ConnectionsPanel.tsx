@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { useArtifact } from "@/components/artifact/artifact-context";
+import { ConnectionStatus } from "@/components/connection-status";
 import { EmptyState } from "@/components/empty-state";
 import {
   ListPane,
@@ -44,19 +45,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { connectionMarkColor } from "@/lib/connection-mark";
+import { connectionIdentityColor } from "@/lib/connection-mark";
 import { abandonConnectionWork } from "@/lib/session";
 import { api, isDesktopRequiredError } from "@/lib/tauri";
 import type { ConnectRequest, ConnectionInfo, Dialect } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/stores/workspace";
-
-/** Stored on new connections; UI prefers `connectionMarkColor`. */
-const COLOR = {
-  sqlite: "oklch(0.55 0 0)",
-  postgres: "oklch(0.72 0 0)",
-  prod: "var(--prod)",
-} as const;
 
 export function ConnectionsPanel() {
   const {
@@ -150,7 +144,10 @@ export function ConnectionsPanel() {
             name: form.name || "SQLite",
             dialect: "sqlite",
             filePath: form.filePath,
-            color: isProduction ? COLOR.prod : COLOR.sqlite,
+            color: connectionIdentityColor({
+              dialect: "sqlite",
+              isProduction,
+            }),
             isProduction,
           }
         : {
@@ -161,7 +158,10 @@ export function ConnectionsPanel() {
             database: form.database,
             username: form.username,
             password: form.password,
-            color: isProduction ? COLOR.prod : COLOR.postgres,
+            color: connectionIdentityColor({
+              dialect: "postgres",
+              isProduction,
+            }),
             isProduction,
           };
 
@@ -270,21 +270,20 @@ export function ConnectionsPanel() {
                   onClick={() => void selectConnection(c.id)}
                 >
                   <div className="flex items-center gap-2 pr-7">
-                    <span
-                      className={cn(
-                        "size-2 shrink-0 rounded-full",
-                        c.connected
-                          ? "ring-2 ring-foreground/25"
-                          : "opacity-35",
-                      )}
-                      style={{ background: connectionMarkColor(c) }}
-                      title={c.connected ? "Connected" : "Disconnected"}
-                    />
+                    <ConnectionStatus connected={c.connected} />
                     <span className="truncate text-[13px] font-medium leading-snug">
                       {c.name}
                     </span>
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-4 text-[11px] text-muted-foreground">
+                    <span
+                      className={cn(
+                        c.connected ? "text-success" : "text-muted-foreground",
+                      )}
+                    >
+                      {c.connected ? "Connected" : "Offline"}
+                    </span>
+                    <span aria-hidden>·</span>
                     <span className="capitalize">{c.dialect}</span>
                     {c.isProduction && (
                       <ProdBadge compact unlocked={!!c.adminWritesUnlocked} />

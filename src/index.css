@@ -24,6 +24,8 @@
   --color-destructive: var(--destructive);
   --color-prod: var(--prod);
   --color-prod-muted: var(--prod-muted);
+  --color-success: var(--success);
+  --color-success-muted: var(--success-muted);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -61,6 +63,8 @@
   --destructive: oklch(0.577 0.245 27.325);
   --prod: oklch(0.5 0.18 25);
   --prod-muted: oklch(0.96 0.02 25);
+  --success: oklch(0.52 0.14 155);
+  --success-muted: oklch(0.96 0.02 155);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -97,6 +101,8 @@
   --destructive: oklch(0.7 0.17 25);
   --prod: oklch(0.78 0.14 25);
   --prod-muted: oklch(0.25 0.04 25);
+  --success: oklch(0.78 0.14 155);
+  --success-muted: oklch(0.25 0.04 155);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);

@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import { ActivityPulse } from "@/components/activity-pulse";
 import { cn } from "@/lib/utils";
 
-export type StatusPillTone = "idle" | "busy" | "error";
+export type StatusPillTone = "idle" | "busy" | "success" | "error";
 
 /** Compact frosted status chip for the shell header. */
 export function StatusPill({
@@ -25,6 +25,7 @@ export function StatusPill({
         "dark:bg-black/55 dark:shadow-none dark:ring-white/10 dark:backdrop-blur-md",
         "transition-opacity duration-300 ease-out",
         tone === "error" && "ring-destructive/30 dark:ring-destructive/40",
+        tone === "success" && "ring-success/25 dark:ring-success/35",
         className,
       )}
       role="status"
@@ -36,10 +37,18 @@ export function StatusPill({
           aria-hidden
         />
       )}
+      {tone === "success" && (
+        <span
+          className="size-1.5 shrink-0 rounded-full bg-success"
+          aria-hidden
+        />
+      )}
       <span
         className={cn(
           "min-w-0 truncate text-xs font-medium",
-          tone === "error" ? "text-destructive" : "text-foreground/80",
+          tone === "error" && "text-destructive",
+          tone === "success" && "text-success",
+          (tone === "idle" || tone === "busy") && "text-foreground/80",
         )}
         title={label}
       >
@@ -70,6 +79,14 @@ export function statusTone(
   if (busy) return "busy";
   if (/error|failed|rejected|denied|unable|cannot|panic/i.test(status)) {
     return "error";
+  }
+  if (
+    /^(done|ready|saved|updated|demo ready|explain plan ready|schema refreshed|active:)/i.test(
+      status,
+    ) ||
+    /\b(ready|saved|updated|exported|created)\b/i.test(status)
+  ) {
+    return "success";
   }
   return "idle";
 }

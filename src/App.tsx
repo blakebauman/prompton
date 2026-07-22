@@ -10,6 +10,7 @@ import {
   useArtifact,
 } from "@/components/artifact/artifact-context";
 import { ArtifactPane } from "@/components/artifact/artifact-pane";
+import { ConnectionStatus } from "@/components/connection-status";
 import { ProdBadge } from "@/components/prod-badge";
 import { StatusPill, statusTone } from "@/components/status-pill";
 import { TitleBarDragRegion } from "@/components/titlebar-drag-region";
@@ -30,7 +31,6 @@ import { ConnectionsPanel } from "@/features/connections/ConnectionsPanel";
 import { HistoryPanel } from "@/features/history/HistoryPanel";
 import { LibraryPanel } from "@/features/library/LibraryPanel";
 import { SettingsPanel } from "@/features/settings/SettingsPanel";
-import { connectionMarkColor } from "@/lib/connection-mark";
 import { isDesktopRequiredError } from "@/lib/tauri";
 import { TOP_SAFE_AREA_PADDING } from "@/lib/ui";
 import { cn } from "@/lib/utils";
@@ -70,7 +70,8 @@ function AppShell() {
 
   useEffect(() => {
     if (!showStatus || busy || tone === "error") return;
-    const t = window.setTimeout(() => setStatus("Ready"), 4200);
+    const ms = tone === "success" ? 3200 : 4200;
+    const t = window.setTimeout(() => setStatus("Ready"), ms);
     return () => window.clearTimeout(t);
   }, [showStatus, busy, tone, status, setStatus]);
 
@@ -106,11 +107,7 @@ function AppShell() {
                     /
                   </span>
                   <span className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-                    <span
-                      className="size-2 shrink-0 rounded-full ring-2 ring-background"
-                      style={{ background: connectionMarkColor(active) }}
-                      aria-hidden
-                    />
+                    <ConnectionStatus connected={!!active.connected} />
                     <span className="truncate font-medium text-foreground">
                       {active.name}
                     </span>

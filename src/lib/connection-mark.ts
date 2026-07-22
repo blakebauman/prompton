@@ -1,7 +1,10 @@
-import type { ConnectionInfo, Dialect } from "@/lib/types";
+import type { Dialect } from "@/lib/types";
 
-/** Monochrome connection marks — chromatic accent only for production. */
-export function connectionMarkColor(c: {
+/**
+ * Stored identity color for a connection (grayscale dialect tint).
+ * Live connection status uses `ConnectionStatus` (green when connected).
+ */
+export function connectionIdentityColor(c: {
   dialect: Dialect;
   isProduction?: boolean;
 }): string {
@@ -9,6 +12,5 @@ export function connectionMarkColor(c: {
   return c.dialect === "postgres" ? "oklch(0.72 0 0)" : "oklch(0.55 0 0)";
 }
 
-export function connectionMarkTitle(c: Pick<ConnectionInfo, "connected">): string {
-  return c.connected ? "Connected" : "Disconnected";
-}
+/** @deprecated Use connectionIdentityColor — kept for call-site migration. */
+export const connectionMarkColor = connectionIdentityColor;

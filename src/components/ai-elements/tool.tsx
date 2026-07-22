@@ -58,7 +58,7 @@ const statusIcons: Record<ToolState, ReactNode> = {
   ),
   "input-streaming": <CircleIcon className="size-3.5 text-muted-foreground" />,
   "output-available": (
-    <CheckCircleIcon className="size-3.5 text-foreground" />
+    <CheckCircleIcon className="size-3.5 text-success" />
   ),
   "output-denied": <XCircleIcon className="size-3.5 text-muted-foreground" />,
   "output-error": <XCircleIcon className="size-3.5 text-destructive" />,
@@ -69,6 +69,7 @@ export const getStatusBadge = (status: ToolState) => (
     className={cn(
       "gap-1 rounded-md px-1.5 py-0 text-[10px] font-medium",
       status === "output-error" && "text-destructive",
+      status === "output-available" && "text-success",
     )}
     variant="secondary"
   >
