@@ -267,17 +267,17 @@ export function ChatPanel() {
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden">
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-14 bg-gradient-to-b from-background to-transparent" />
-      <div className="relative z-20 flex h-11 shrink-0 items-center justify-between px-4 pt-1">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-gradient-to-b from-background to-transparent" />
+      <div className="relative z-20 flex h-10 shrink-0 items-center justify-between px-4">
         <div className="flex items-center gap-2">
           {agentBusy && <ActivityPulse mode="busy" />}
-          <h2 className="text-lg font-bold tracking-tight">Chat</h2>
+          <h2 className="text-base font-bold tracking-tight">Chat</h2>
         </div>
         {agentBusy && (
           <Button
             size="sm"
             variant="ghost"
-            className="pointer-events-auto -mr-1"
+            className="pointer-events-auto -mr-1 h-7 px-2"
             onClick={() => {
               if (sessionId) void api.agentCancel(sessionId);
               setAgentBusy(false);
@@ -293,13 +293,13 @@ export function ChatPanel() {
         <ConversationContent className="gap-3 px-4 pt-1 pb-4">
           {!activeConnId ? (
             <ConversationEmptyState
-              icon={<DatabaseIcon className="size-8" />}
+              icon={<DatabaseIcon className="size-7 opacity-40" />}
               title="Connect a database"
               description="Add Postgres or SQLite, then ask Prompton about your data."
             />
           ) : showEmpty ? (
             <ConversationEmptyState
-              icon={<DatabaseIcon className="size-8 opacity-50" />}
+              icon={<DatabaseIcon className="size-7 opacity-40" />}
               title="Ask Prompton"
               description="Natural language or SQL. The agent keeps context small and inspectable."
             />
@@ -317,53 +317,61 @@ export function ChatPanel() {
         <ConversationScrollButton />
       </Conversation>
 
-      {activeConnId && (
-        <div className="space-y-2 border-t border-border/60 p-2.5">
-          {active?.isProduction && !active.adminWritesUnlocked && (
-            <div className="rounded-md border border-prod/25 bg-prod-muted px-2.5 py-1.5 text-[11px] leading-snug text-prod text-pretty">
-              Production is read-only. Mutations pause for approval.
-            </div>
-          )}
-          {showEmpty && (
-            <Suggestions className="px-1">
-              {SUGGESTIONS.map((s) => (
-                <Suggestion
-                  key={s}
-                  suggestion={s}
-                  onClick={(value) => void send(value)}
-                />
-              ))}
-            </Suggestions>
-          )}
-          <PromptInput
-            onSubmit={(e) => promptFormSubmit(e, () => void send())}
-          >
-            <PromptInputTextarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about your data…"
-              disabled={agentBusy}
-              onSubmit={() => void send()}
-            />
-            <PromptInputFooter>
-              <span className="px-1 text-[11px] text-muted-foreground/80">
-                ↵ send
-              </span>
-              <PromptInputSubmit
-                status={status}
-                disabled={!input.trim() || agentBusy}
-                onClick={(e) => {
-                  if (status === "streaming") {
-                    e.preventDefault();
-                    if (sessionId) void api.agentCancel(sessionId);
-                    setAgentBusy(false);
-                  }
-                }}
+      <div className="space-y-2 border-t border-border/60 p-2.5">
+        {active?.isProduction && !active.adminWritesUnlocked && (
+          <div className="rounded-md border border-prod/25 bg-prod-muted px-2.5 py-1.5 text-[11px] leading-snug text-prod text-pretty">
+            Production is read-only. Mutations pause for approval.
+          </div>
+        )}
+        {activeConnId && showEmpty && (
+          <Suggestions className="px-0.5">
+            {SUGGESTIONS.map((s) => (
+              <Suggestion
+                key={s}
+                suggestion={s}
+                onClick={(value) => void send(value)}
               />
-            </PromptInputFooter>
-          </PromptInput>
-        </div>
-      )}
+            ))}
+          </Suggestions>
+        )}
+        <PromptInput
+          onSubmit={(e) =>
+            promptFormSubmit(e, () => {
+              if (activeConnId) void send();
+            })
+          }
+        >
+          <PromptInputTextarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={
+              activeConnId
+                ? "Ask about your data…"
+                : "Connect a database to start chatting…"
+            }
+            disabled={!activeConnId || agentBusy}
+            onSubmit={() => {
+              if (activeConnId) void send();
+            }}
+          />
+          <PromptInputFooter>
+            <span className="px-1 text-[11px] text-muted-foreground/70">
+              {activeConnId ? "↵ send · ⇧↵ newline" : "Connect to enable chat"}
+            </span>
+            <PromptInputSubmit
+              status={status}
+              disabled={!activeConnId || !input.trim() || agentBusy}
+              onClick={(e) => {
+                if (status === "streaming") {
+                  e.preventDefault();
+                  if (sessionId) void api.agentCancel(sessionId);
+                  setAgentBusy(false);
+                }
+              }}
+            />
+          </PromptInputFooter>
+        </PromptInput>
+      </div>
 
       <WriteConfirmDialog
         open={!!pendingConfirm}

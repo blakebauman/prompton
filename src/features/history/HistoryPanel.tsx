@@ -166,19 +166,15 @@ export function HistoryPanel({
       </div>
 
       <div className="relative min-w-0 flex-1 overflow-hidden border-l border-border/60">
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-14 bg-gradient-to-b from-background to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-16 bg-gradient-to-b from-background to-transparent" />
         {selected ? (
           <>
-            <div className="relative z-20 flex items-start justify-between gap-3 px-6 pt-5 pb-2">
+            <div className="absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 px-6 pt-5">
               <div className="min-w-0">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  {selected.kind}
+                <p className="text-[11px] text-muted-foreground">
+                  <span className="capitalize">{selected.kind}</span>
                   {selected.connName ? ` · ${selected.connName}` : ""}
-                </p>
-                <h2 className="mt-1 truncate text-2xl font-bold tracking-tight">
-                  {selected.title}
-                </h2>
-                <p className="mt-1 text-xs text-muted-foreground">
+                  {" · "}
                   {formatWhen(selected.createdAt)}
                   {selected.meta?.durationMs != null && (
                     <> · {String(selected.meta.durationMs)}ms</>
@@ -187,6 +183,9 @@ export function HistoryPanel({
                     <> · {String(selected.meta.totalRows)} rows</>
                   )}
                 </p>
+                <h2 className="mt-1 truncate text-xl font-bold tracking-tight">
+                  {selected.title}
+                </h2>
               </div>
               <div className="flex shrink-0 gap-1">
                 {selected.kind === "query" && (
@@ -213,8 +212,8 @@ export function HistoryPanel({
                 </Button>
               </div>
             </div>
-            <div className="h-[calc(100%-5.5rem)] space-y-4 overflow-y-auto px-6 pb-8">
-              <pre className="whitespace-pre-wrap rounded-lg border border-border/60 bg-muted/30 p-4 font-mono text-xs leading-relaxed text-muted-foreground">
+            <div className="h-full space-y-4 overflow-y-auto px-6 pt-20 pb-8">
+              <pre className="whitespace-pre-wrap rounded-md border border-border/50 bg-muted/25 p-4 font-mono text-xs leading-relaxed text-muted-foreground">
                 {selected.body}
               </pre>
               {selected.detail && (
@@ -222,7 +221,7 @@ export function HistoryPanel({
                   <h3 className="mb-2 text-xs font-medium text-muted-foreground">
                     Response
                   </h3>
-                  <pre className="whitespace-pre-wrap rounded-lg border border-border/60 bg-muted/20 p-4 text-xs leading-relaxed">
+                  <pre className="whitespace-pre-wrap rounded-md border border-border/50 bg-muted/15 p-4 text-xs leading-relaxed">
                     {selected.detail}
                   </pre>
                 </div>
@@ -231,10 +230,10 @@ export function HistoryPanel({
           </>
         ) : (
           <>
-            <div className="relative z-20 px-6 pt-5 pb-2">
-              <h2 className="text-2xl font-bold tracking-tight">Run detail</h2>
+            <div className="absolute inset-x-0 top-0 z-20 px-6 pt-5">
+              <h2 className="text-xl font-bold tracking-tight">Run detail</h2>
             </div>
-            <div className="px-6 pb-8">
+            <div className="h-full px-6 pt-16">
               <EmptyState
                 title="Select a run"
                 description="Pick a query or agent transcript from the list."

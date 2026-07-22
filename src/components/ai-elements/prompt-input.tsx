@@ -16,7 +16,7 @@ export function PromptInput({ className, ...props }: PromptInputProps) {
   return (
     <form
       className={cn(
-        "w-full divide-y overflow-hidden rounded-xl border bg-background shadow-sm",
+        "w-full divide-y divide-border/60 overflow-hidden rounded-lg border border-border/60 bg-background",
         className,
       )}
       {...props}
@@ -37,7 +37,7 @@ export function PromptInputTextarea({
   return (
     <Textarea
       className={cn(
-        "min-h-[72px] w-full resize-none rounded-none border-0 p-3 shadow-none focus-visible:ring-0",
+        "min-h-[64px] w-full resize-none rounded-none border-0 bg-transparent p-3 shadow-none focus-visible:ring-0",
         className,
       )}
       onKeyDown={(e: KeyboardEvent<HTMLTextAreaElement>) => {

@@ -20,7 +20,10 @@ import {
 } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
 import {
+  Tooltip,
+  TooltipContent,
   TooltipProvider,
+  TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ChatPanel } from "@/features/chat/ChatPanel";
 import { ConnectionsPanel } from "@/features/connections/ConnectionsPanel";
@@ -119,21 +122,28 @@ function AppShell() {
                 />
               )}
               {activity === "workspace" && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => toggle()}
-                  aria-label={
-                    artifact.open ? "Hide artifact" : "Show artifact"
-                  }
-                >
-                  {artifact.open ? (
-                    <PanelRightClose className="size-4" />
-                  ) : (
-                    <PanelRightOpen className="size-4" />
-                  )}
-                  <span className="hidden sm:inline">Artifact</span>
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
+                      className="rounded-md"
+                      onClick={() => toggle()}
+                      aria-label={
+                        artifact.open ? "Hide artifact" : "Show artifact"
+                      }
+                    >
+                      {artifact.open ? (
+                        <PanelRightClose className="size-4" />
+                      ) : (
+                        <PanelRightOpen className="size-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    {artifact.open ? "Hide artifact" : "Show artifact"}
+                  </TooltipContent>
+                </Tooltip>
               )}
             </div>
           </header>
@@ -174,12 +184,19 @@ function AppShell() {
             )}
 
             {activity === "settings" && (
-              <div className="h-full overflow-y-auto">
-                <div className="mx-auto max-w-2xl px-6 py-6">
-                  <h1 className="mb-6 text-2xl font-bold tracking-tight">
-                    Settings
-                  </h1>
-                  <SettingsPanel />
+              <div className="relative h-full overflow-hidden">
+                <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-16 bg-gradient-to-b from-background to-transparent" />
+                <div className="absolute inset-x-0 top-0 z-20 px-6 pt-5">
+                  <div className="mx-auto max-w-2xl">
+                    <h1 className="text-2xl font-bold tracking-tight">
+                      Settings
+                    </h1>
+                  </div>
+                </div>
+                <div className="h-full overflow-y-auto">
+                  <div className="mx-auto max-w-2xl px-6 pt-16 pb-10">
+                    <SettingsPanel />
+                  </div>
                 </div>
               </div>
             )}

@@ -14,11 +14,13 @@ export function SettingSection({
 }) {
   return (
     <section className="space-y-1">
-      <h3 className="text-sm font-semibold">{title}</h3>
+      <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
       {description && (
         <p className="text-xs text-muted-foreground text-pretty">{description}</p>
       )}
-      <div className="divide-y divide-border/60 pt-2">{children}</div>
+      <div className="mt-1 divide-y divide-border/50 rounded-lg border border-border/50 bg-muted/15 px-3">
+        {children}
+      </div>
     </section>
   );
 }
