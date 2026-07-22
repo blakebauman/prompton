@@ -31,6 +31,7 @@ import { ConnectionsPanel } from "@/features/connections/ConnectionsPanel";
 import { HistoryPanel } from "@/features/history/HistoryPanel";
 import { LibraryPanel } from "@/features/library/LibraryPanel";
 import { SettingsPanel } from "@/features/settings/SettingsPanel";
+import { useActivityLogBridge } from "@/hooks/use-activity-log-bridge";
 import { isDesktopRequiredError } from "@/lib/tauri";
 import { TOP_SAFE_AREA_PADDING } from "@/lib/ui";
 import { cn } from "@/lib/utils";
@@ -74,6 +75,8 @@ function AppShell() {
     const t = window.setTimeout(() => setStatus("Ready"), ms);
     return () => window.clearTimeout(t);
   }, [showStatus, busy, tone, status, setStatus]);
+
+  useActivityLogBridge();
 
   return (
     <div

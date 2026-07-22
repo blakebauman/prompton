@@ -5,6 +5,7 @@ import { ActionNotice } from "@/components/action-notice";
 import { useArtifact } from "@/components/artifact/artifact-context";
 import { CopyableSnippet } from "@/components/copyable-snippet";
 import { LinkTile } from "@/components/link-tile";
+import { LogConsole } from "@/components/log-console";
 import { SettingRow, SettingSection } from "@/components/setting-row";
 import { SettingsHelpAside } from "@/components/settings-help-aside";
 import { UnderlineTab, UnderlineTabs } from "@/components/underline-tabs";
@@ -28,6 +29,7 @@ type SettingsTab =
   | "provider"
   | "skills"
   | "prompts"
+  | "diagnostics"
   | "about";
 
 const TABS: Array<{ id: SettingsTab; label: string }> = [
@@ -35,6 +37,7 @@ const TABS: Array<{ id: SettingsTab; label: string }> = [
   { id: "provider", label: "Provider" },
   { id: "skills", label: "Skills" },
   { id: "prompts", label: "Prompts" },
+  { id: "diagnostics", label: "Diagnostics" },
   { id: "about", label: "About" },
 ];
 
@@ -365,6 +368,28 @@ export function SettingsPanel() {
             </Button>
           </div>
         </SettingSection>
+      )}
+
+      {tab === "diagnostics" && (
+        <div className="flex items-start gap-8">
+          <div className="min-w-0 flex-1">
+            <LogConsole />
+          </div>
+          <SettingsHelpAside
+            title="About diagnostics"
+            body="Status messages from connections, queries, and the agent are mirrored here while the app is open."
+            tips={[
+              {
+                title: "Session only",
+                body: "The log clears when you quit Prompton or press Clear.",
+              },
+              {
+                title: "Stick to bottom",
+                body: "Scroll up to pause follow mode; use Scroll to bottom to resume.",
+              },
+            ]}
+          />
+        </div>
       )}
 
       {tab === "about" && (

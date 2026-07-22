@@ -412,6 +412,7 @@ export function ChatPanel({
           </Suggestions>
         )}
         <PromptInput
+          frosted
           onSubmit={(e) =>
             promptFormSubmit(e, () => {
               if (activeConnId) void send();
