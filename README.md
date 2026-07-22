@@ -11,7 +11,7 @@ High-performance, native, agentic database client — conversational-first — f
 - Conversational agent (Prompton) with tool calling in Rust
 - SQL editor with cancel + confirmation for mutating statements
 - Production connections stay read-only until HITL approval (optional admin unlock)
-- Virtualized results grid with paged fetch + CSV/JSON export
+- Virtualized results grid with paged fetch, cell selection, CSV/JSON export (all / loaded / selection), and cell edit (single-table SELECT + PK via HITL)
 - Schema explorer + artifact pane (Results / SQL / Schema / Explain / Context)
 - Query + agent history (on-disk, list+detail)
 - On-disk skills (`SKILL.md`) and prompt library with Library edit

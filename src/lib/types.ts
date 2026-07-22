@@ -42,6 +42,20 @@ export interface QueryColumn {
   dataType: string;
 }
 
+export interface ColumnInfo {
+  name: string;
+  dataType: string;
+  nullable: boolean;
+  isPrimaryKey: boolean;
+}
+
+export interface TableDescription {
+  schema: string;
+  table: string;
+  columns: ColumnInfo[];
+  estimatedRows?: number | null;
+}
+
 export interface QueryPage {
   queryId: string;
   columns: QueryColumn[];

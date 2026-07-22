@@ -14,6 +14,7 @@ import type {
   RunQueryRequest,
   SchemaNode,
   SkillMeta,
+  TableDescription,
 } from "./types";
 
 /** True when running inside the Tauri webview (not plain Vite browser). */
@@ -62,7 +63,7 @@ export const api = {
   removeConnection: (id: string) => invoke<void>("remove_connection", { id }),
   listSchemas: (id: string) => invoke<SchemaNode[]>("list_schemas", { id }),
   describeTable: (id: string, schema: string, table: string) =>
-    invoke("describe_table", { id, schema, table }),
+    invoke<TableDescription>("describe_table", { id, schema, table }),
   runQuery: (request: RunQueryRequest) =>
     invoke<QueryPage>("run_query", {
       request,
