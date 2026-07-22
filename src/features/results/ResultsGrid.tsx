@@ -2,6 +2,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChartColumn,
+  Copy,
   Download,
   FileCode2,
   FileJson,
@@ -20,6 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "@/hooks/use-toast";
 import {
   downloadTextFile,
   exportFilename,
@@ -279,13 +281,31 @@ export function ResultsGrid() {
           : scope === "loaded"
             ? "loaded rows"
             : "selection";
-      setStatus(
-        `Exported ${rows.length.toLocaleString()} ${label} as ${format.toUpperCase()}`,
-      );
+      const msg = `Exported ${rows.length.toLocaleString()} ${label} as ${format.toUpperCase()}`;
+      setStatus(msg);
+      toast({ title: "Export ready", description: msg, tone: "success" });
     } catch (e) {
       setStatus(String(e));
+      toast({
+        title: "Export failed",
+        description: String(e),
+        tone: "error",
+      });
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function copySql() {
+    if (!result?.sql) return;
+    try {
+      await navigator.clipboard.writeText(result.sql);
+      toast({ title: "SQL copied", tone: "success" });
+    } catch {
+      toast({
+        title: "Couldn’t copy SQL",
+        tone: "error",
+      });
     }
   }
 
@@ -453,31 +473,63 @@ export function ResultsGrid() {
 
   const rows = result.rows;
 
+  const sqlPreview = result.sql.trim().replace(/\s+/g, " ");
+
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-2 text-[11px] text-muted-foreground">
-        <span className="min-w-0 truncate px-1">
-          <span className="font-medium text-foreground">
-            {result.totalRows.toLocaleString()}
-          </span>{" "}
-          rows
-          {result.truncated ? " · truncated" : ""}
-          {" · "}
-          {result.durationMs}ms
-          {result.affectedRows != null
-            ? ` · ${result.affectedRows} affected`
-            : ""}
-          {loadedRowCount(result) < result.totalRows
-            ? ` · ${loadedRowCount(result).toLocaleString()} loaded`
-            : ""}
-          {selected.size > 0
-            ? ` · ${selected.size} cell${selected.size === 1 ? "" : "s"} selected`
-            : ""}
-          {canEdit ? " · double-click to edit" : ""}
-        </span>
-        <div className="flex shrink-0 items-center gap-1">
+      <div className="flex min-h-9 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-2 py-1 text-[11px] text-muted-foreground">
+        <div className="min-w-0 flex-1 px-1 leading-tight">
+          <div className="truncate">
+            <span className="font-medium text-foreground">
+              {result.totalRows.toLocaleString()}
+            </span>{" "}
+            rows
+            {result.truncated ? " · truncated" : ""}
+            {" · "}
+            {result.durationMs}ms
+            {result.affectedRows != null
+              ? ` · ${result.affectedRows} affected`
+              : ""}
+            {loadedRowCount(result) < result.totalRows
+              ? ` · ${loadedRowCount(result).toLocaleString()} loaded`
+              : ""}
+            {selected.size > 0
+              ? ` · ${selected.size} cell${selected.size === 1 ? "" : "s"} selected`
+              : ""}
+            {canEdit ? " · double-click to edit" : ""}
+          </div>
+          {sqlPreview && (
+            <div
+              className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground/70"
+              title={result.sql}
+            >
+              {sqlPreview}
+            </div>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-0.5">
           <Button
-            size="sm"
+            size="xs"
+            variant="ghost"
+            onClick={() => {
+              setSql(result.sql);
+              openArtifact("sql");
+            }}
+          >
+            <FileCode2 className="size-3.5" />
+            SQL
+          </Button>
+          <Button
+            size="xs"
+            variant="ghost"
+            disabled={!result.sql.trim()}
+            onClick={() => void copySql()}
+          >
+            <Copy className="size-3.5" />
+            Copy
+          </Button>
+          <Button
+            size="xs"
             variant="ghost"
             disabled={result.totalRows === 0}
             onClick={() => openArtifact("chart")}
@@ -488,12 +540,12 @@ export function ResultsGrid() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                size="sm"
+                size="xs"
                 variant="ghost"
                 disabled={exporting || result.totalRows === 0}
               >
                 <Download className="size-3.5" />
-                {exporting ? "Exporting…" : "Export"}
+                {exporting ? "…" : "Export"}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-48">
@@ -540,7 +592,7 @@ export function ResultsGrid() {
           </DropdownMenu>
           {running && result.queryId && (
             <Button
-              size="sm"
+              size="xs"
               variant="ghost"
               onClick={() =>
                 void api

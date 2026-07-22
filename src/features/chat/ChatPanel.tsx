@@ -33,6 +33,7 @@ import {
   ToolHeader,
   ToolInput,
   ToolOutput,
+  artifactActionIcon,
   type ToolState,
 } from "@/components/ai-elements/tool";
 import { ActionNotice } from "@/components/action-notice";
@@ -501,9 +502,27 @@ function ChatBubble({ message }: { message: ChatMessage }) {
       input = message.toolArgs;
     }
     const artifactKind = artifactKindForTool(message.toolName);
+    const sqlSubtitle =
+      input &&
+      typeof input === "object" &&
+      input !== null &&
+      "sql" in input &&
+      typeof (input as { sql?: unknown }).sql === "string"
+        ? (input as { sql: string }).sql.trim().replace(/\s+/g, " ")
+        : undefined;
+    const ArtifactIcon = artifactKind
+      ? artifactActionIcon(artifactKind)
+      : null;
+    const running =
+      state === "input-available" || state === "input-streaming";
     return (
-      <Tool defaultOpen={state !== "output-available"}>
-        <ToolHeader title={message.toolName ?? "tool"} state={state} />
+      <Tool defaultOpen={running || state === "output-error"}>
+        <ToolHeader
+          title={message.toolName ?? "tool"}
+          toolName={message.toolName}
+          state={state}
+          subtitle={sqlSubtitle}
+        />
         <ToolContent>
           {input != null && input !== "" && <ToolInput input={input} />}
           {(message.content || state === "output-error") && (
@@ -514,14 +533,14 @@ function ChatBubble({ message }: { message: ChatMessage }) {
               }
             />
           )}
-          {artifactKind && state === "output-available" && (
+          {artifactKind && state === "output-available" && ArtifactIcon && (
             <Button
-              size="sm"
+              size="xs"
               variant="outline"
-              className="mt-1"
               onClick={() => openArtifact(artifactKind)}
             >
-              Open in artifact
+              <ArtifactIcon className="size-3.5" />
+              Open {artifactKind}
             </Button>
           )}
         </ToolContent>
