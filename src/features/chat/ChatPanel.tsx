@@ -59,6 +59,7 @@ import {
   switchActiveConnection,
 } from "@/lib/session";
 import { api, onEvent } from "@/lib/tauri";
+import { summarizeToolResult, toolResultState } from "@/lib/tool-summary";
 import type { ChatMessage, PendingConfirmation, QueryPage } from "@/lib/types";
 import { useWorkspace } from "@/stores/workspace";
 
@@ -172,9 +173,7 @@ export function AssistantPanel({
       }>("agent:tool_result", (p) => {
         if (!isCurrentAgentSession(p.sessionId)) return;
         const ws = useWorkspace.getState();
-        const toolState = p.result.trim().startsWith("Error:")
-          ? ("output-error" as const)
-          : ("output-available" as const);
+        const toolState = toolResultState(p.result);
         const id = p.id ? `tool-${p.id}` : null;
         const existing = id
           ? ws.messages.find((m) => m.id === id)
@@ -219,6 +218,8 @@ export function AssistantPanel({
           toolArgs: p.arguments,
           toolState: "input-available",
         });
+        // Only jump the artifact pane for SQL-bearing tools; schema/explain
+        // stay in chat until the user opens them from the card.
         if (p.name === "run_query" || p.name === "sample_rows") {
           try {
             const args = JSON.parse(p.arguments) as { sql?: string };
@@ -229,10 +230,6 @@ export function AssistantPanel({
           } catch {
             /* ignore */
           }
-        } else if (p.name === "inspect_schema" || p.name === "list_tables") {
-          openArtifact("schema");
-        } else if (p.name === "explain_query") {
-          openArtifact("explain");
         }
       });
       await subscribe<PendingConfirmation>("agent:confirm", (p) => {
@@ -241,7 +238,28 @@ export function AssistantPanel({
           return;
         }
         if (p.sessionId && !isCurrentAgentSession(p.sessionId)) return;
+        if (p.toolCallId) {
+          const toolId = `tool-${p.toolCallId}`;
+          if (ws.messages.some((m) => m.id === toolId)) {
+            ws.patchMessage(toolId, { toolState: "approval-requested" });
+          }
+        } else {
+          // Fallback: mark the newest running run_query card.
+          const running = [...ws.messages]
+            .reverse()
+            .find(
+              (m) =>
+                m.role === "tool" &&
+                m.toolName === "run_query" &&
+                (m.toolState === "input-available" ||
+                  m.toolState === "input-streaming"),
+            );
+          if (running) {
+            ws.patchMessage(running.id, { toolState: "approval-requested" });
+          }
+        }
         ws.setPendingConfirm(p);
+        ws.setStatus("Awaiting write approval");
       });
       await subscribe<{ sessionId: string }>("agent:done", async (p) => {
         if (!isCurrentAgentSession(p.sessionId)) return;
@@ -406,7 +424,9 @@ export function AssistantPanel({
         (m.role === "assistant" && m.id.startsWith("stream-")) ||
         (m.role === "tool" &&
           (m.toolState === "input-available" ||
-            m.toolState === "input-streaming")),
+            m.toolState === "input-streaming" ||
+            m.toolState === "approval-requested" ||
+            m.toolState === "approval-responded")),
     );
 
   function stopAgent() {
@@ -632,6 +652,14 @@ export function AssistantPanel({
           void (async () => {
             if (!pendingConfirm) return;
             const id = pendingConfirm.confirmationId;
+            const toolId = pendingConfirm.toolCallId
+              ? `tool-${pendingConfirm.toolCallId}`
+              : null;
+            if (toolId) {
+              useWorkspace
+                .getState()
+                .patchMessage(toolId, { toolState: "approval-responded" });
+            }
             setPendingConfirm(null);
             try {
               setStatus("Write rejected — agent continuing…");
@@ -656,6 +684,14 @@ export function AssistantPanel({
             if (!pendingConfirm) return;
             const id = pendingConfirm.confirmationId;
             const prod = !!pendingConfirm.isProduction;
+            const toolId = pendingConfirm.toolCallId
+              ? `tool-${pendingConfirm.toolCallId}`
+              : null;
+            if (toolId) {
+              useWorkspace
+                .getState()
+                .patchMessage(toolId, { toolState: "approval-responded" });
+            }
             setPendingConfirm(null);
             try {
               setStatus(
@@ -726,11 +762,21 @@ function ChatBubble({
         ? (input as { sql: string }).sql
         : undefined;
     const sqlSubtitle = sql?.trim().replace(/\s+/g, " ");
+    const summary = message.content
+      ? summarizeToolResult(message.toolName, message.content, input)
+      : {};
+    const subtitle =
+      state === "approval-requested"
+        ? "Needs write approval"
+        : summary.subtitle || sqlSubtitle;
     const ArtifactIcon = artifactKind
       ? artifactActionIcon(artifactKind)
       : null;
     const running =
-      state === "input-available" || state === "input-streaming";
+      state === "input-available" ||
+      state === "input-streaming" ||
+      state === "approval-requested" ||
+      state === "approval-responded";
     const done = state === "output-available";
 
     return (
@@ -739,18 +785,62 @@ function ChatBubble({
           title={message.toolName ?? "tool"}
           toolName={message.toolName}
           state={state}
-          subtitle={sqlSubtitle}
+          subtitle={subtitle}
         />
         <ToolContent>
           {input != null && input !== "" && <ToolInput input={input} />}
-          {(message.content || state === "output-error") && (
-            <ToolOutput
-              output={message.content || undefined}
-              errorText={
-                state === "output-error" ? message.content : undefined
-              }
-            />
+          {summary.kind === "schema" && summary.schema && (
+            <div className="space-y-1.5">
+              <h4 className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+                Columns
+              </h4>
+              <ul className="max-h-40 space-y-0.5 overflow-auto rounded-md border border-border/50 bg-background/60 p-2 font-mono text-[11px]">
+                {summary.schema.columns.map((c) => (
+                  <li key={c.name} className="flex items-baseline gap-2">
+                    <span className="min-w-0 truncate text-foreground">
+                      {c.name}
+                    </span>
+                    <span className="shrink-0 text-muted-foreground">
+                      {c.dataType}
+                    </span>
+                    {c.isPrimaryKey && (
+                      <span className="shrink-0 text-muted-foreground">PK</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
+          {summary.kind === "rows" && summary.rowsPreview && (
+            <div className="space-y-1.5">
+              <h4 className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+                Preview
+              </h4>
+              <pre className="max-h-40 overflow-auto rounded-md border border-border/50 bg-background/60 p-2 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
+                {[
+                  summary.rowsPreview.columns.join(" · "),
+                  ...summary.rowsPreview.rows.map((r) => r.join(" · ")),
+                  summary.rowsPreview.omitted
+                    ? `… ${summary.rowsPreview.omitted} more rows omitted`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join("\n")}
+              </pre>
+            </div>
+          )}
+          {message.content &&
+            summary.kind !== "schema" &&
+            summary.kind !== "rows" && (
+              <ToolOutput
+                output={
+                  state === "output-error" ? undefined : message.content
+                }
+                errorText={
+                  state === "output-error" ? message.content : undefined
+                }
+              />
+            )}
           <div className="flex flex-wrap items-center gap-1">
             {sql && (
               <>

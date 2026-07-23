@@ -100,7 +100,9 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
       messages: s.messages.map((m) =>
         m.role === "tool" &&
         (m.toolState === "input-available" ||
-          m.toolState === "input-streaming")
+          m.toolState === "input-streaming" ||
+          m.toolState === "approval-requested" ||
+          m.toolState === "approval-responded")
           ? { ...m, toolState }
           : m,
       ),

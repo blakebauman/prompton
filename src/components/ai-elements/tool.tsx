@@ -109,6 +109,8 @@ export const getStatusBadge = (status: ToolState) => (
       status === "output-error" && "text-destructive",
       status === "output-available" && "text-success",
       status === "input-available" && "text-foreground",
+      status === "approval-requested" && "text-foreground",
+      status === "output-denied" && "text-muted-foreground",
     )}
     variant="secondary"
   >
@@ -217,6 +219,20 @@ export const ToolOutput = ({
 }: ToolOutputProps) => {
   if (!(output || errorText)) return null;
 
+  // Prefer the error text alone — callers often pass the same string as both.
+  if (errorText) {
+    return (
+      <div className={cn("space-y-1.5", className)} {...props}>
+        <h4 className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+          Error
+        </h4>
+        <pre className="max-h-40 overflow-auto rounded-md border border-border/50 bg-background/60 p-2 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-destructive">
+          {errorText}
+        </pre>
+      </div>
+    );
+  }
+
   let body: ReactNode = <div>{output as ReactNode}</div>;
   if (typeof output === "object" && !isValidElement(output)) {
     body = (
@@ -235,17 +251,9 @@ export const ToolOutput = ({
   return (
     <div className={cn("space-y-1.5", className)} {...props}>
       <h4 className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
-        {errorText ? "Error" : "Result"}
+        Result
       </h4>
-      <div
-        className={cn(
-          "overflow-x-auto text-xs",
-          errorText && "text-destructive",
-        )}
-      >
-        {errorText && <div className="mb-2">{errorText}</div>}
-        {body}
-      </div>
+      <div className="overflow-x-auto text-xs">{body}</div>
     </div>
   );
 };
