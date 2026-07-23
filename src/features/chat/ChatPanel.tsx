@@ -521,16 +521,53 @@ export function ChatPanel({
         onReject={() =>
           void (async () => {
             if (!pendingConfirm) return;
-            await api.agentConfirm(pendingConfirm.confirmationId, false);
+            const id = pendingConfirm.confirmationId;
             setPendingConfirm(null);
-            setAgentBusy(false);
+            try {
+              await api.agentConfirm(id, false);
+              setAgentBusy(false);
+              setStatus("Write rejected");
+              toast({ title: "Write rejected" });
+            } catch (e) {
+              setAgentBusy(false);
+              setStatus(String(e));
+              toast({
+                title: "Couldn’t reject write",
+                description: String(e),
+                tone: "error",
+              });
+            }
           })()
         }
         onApprove={() =>
           void (async () => {
             if (!pendingConfirm) return;
-            await api.agentConfirm(pendingConfirm.confirmationId, true);
+            const id = pendingConfirm.confirmationId;
+            const prod = !!pendingConfirm.isProduction;
             setPendingConfirm(null);
+            try {
+              await api.agentConfirm(id, true);
+              setStatus(
+                prod
+                  ? "Production write approved — agent continuing…"
+                  : "Write approved — agent continuing…",
+              );
+              toast({
+                title: "Write approved",
+                description: prod
+                  ? "Production statement approved"
+                  : "Agent will continue",
+                tone: "success",
+              });
+            } catch (e) {
+              setAgentBusy(false);
+              setStatus(String(e));
+              toast({
+                title: "Couldn’t approve write",
+                description: String(e),
+                tone: "error",
+              });
+            }
           })()
         }
       />

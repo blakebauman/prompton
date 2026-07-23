@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import { ProdBadge } from "@/components/prod-badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ type WriteConfirmDialogProps = {
   onReject: () => void;
 };
 
-/** Shared HITL gate for mutating SQL (agent + SQL editor). */
+/** Shared HITL gate for mutating SQL (agent + SQL editor + cell edits). */
 export function WriteConfirmDialog({
   open,
   sql,
@@ -31,6 +31,15 @@ export function WriteConfirmDialog({
   onReject,
 }: WriteConfirmDialogProps) {
   const outcome = useRef<"approve" | "reject" | null>(null);
+  const approveRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    outcome.current = null;
+    // Focus Approve so Enter runs it; Esc closes/rejects via Dialog.
+    const id = window.setTimeout(() => approveRef.current?.focus(), 0);
+    return () => window.clearTimeout(id);
+  }, [open]);
 
   return (
     <Dialog
@@ -90,6 +99,7 @@ export function WriteConfirmDialog({
             Reject
           </Button>
           <Button
+            ref={approveRef}
             size="xs"
             variant={isProduction ? "destructive" : "default"}
             className={
@@ -105,6 +115,9 @@ export function WriteConfirmDialog({
             {isProduction ? "Approve & run" : "Run"}
           </Button>
         </DialogFooter>
+        <p className="-mt-1 text-center text-[10px] text-muted-foreground">
+          Enter to approve · Esc to reject
+        </p>
       </DialogContent>
     </Dialog>
   );

@@ -403,17 +403,18 @@ export function ResultsGrid() {
   function beginEdit(row: number, col: number) {
     if (!result || !canEdit) {
       if (result && !canEdit) {
-        setStatus(
-          target
-            ? "Cell edit needs a single-table SELECT with primary key columns in the result"
-            : "Cell edit works on simple single-table SELECT results",
-        );
+        const msg = target
+          ? "Cell edit needs a single-table SELECT with primary key columns in the result"
+          : "Cell edit works on simple single-table SELECT results";
+        setStatus(msg);
+        toast({ title: "Can’t edit this result", description: msg });
       }
       return;
     }
     const colName = columns[col]?.name;
     if (colName && pkColumns.includes(colName)) {
       setStatus("Primary key cells are read-only");
+      toast({ title: "Primary key is read-only" });
       return;
     }
     const value = result.rows[row]?.[col];

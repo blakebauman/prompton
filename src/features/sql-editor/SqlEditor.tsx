@@ -134,9 +134,12 @@ export function SqlEditor() {
       if (page) {
         setResult(page);
         openArtifact("results");
-        const msg = `Write approved · ${page.affectedRows ?? page.totalRows} affected · ${page.durationMs}ms`;
+        const msg = `Write applied · ${page.affectedRows ?? page.totalRows} affected · ${page.durationMs}ms`;
         setStatus(msg);
         toast({ title: "Write applied", description: msg, tone: "success" });
+      } else {
+        setStatus("Write applied");
+        toast({ title: "Write applied", tone: "success" });
       }
     } catch (e) {
       setStatus(String(e));
