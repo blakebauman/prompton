@@ -263,7 +263,7 @@ export function SettingsPanel() {
           </div>
           <SettingsHelpAside
             title="About providers"
-            body="Prompton talks to local or remote chat APIs. Schema tools need a model that supports function calling."
+            body="Prompton talks to local or remote model APIs. Schema tools need a model that supports function calling."
             tips={[
               {
                 title: "Local first",
@@ -463,7 +463,7 @@ export function SettingsPanel() {
             tips={[
               {
                 title: "Context is inspectable",
-                body: "Open the Context artifact after a chat turn to see what was sent.",
+                body: "Open the Context artifact after an assistant turn to see what was sent.",
               },
               {
                 title: "Production stays locked",

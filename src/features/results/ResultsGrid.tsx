@@ -538,7 +538,7 @@ export function ResultsGrid() {
       <EmptyState
         dashed
         title="No results yet"
-        description="Run a query from SQL, ask in chat, or list tables to get started."
+        description="Run a query from SQL, ask the assistant, or list tables to get started."
         actions={
           <>
             <Button

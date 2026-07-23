@@ -61,6 +61,7 @@ pub fn run() {
             commands::agent_get_settings,
             commands::agent_set_settings,
             commands::agent_last_context,
+            commands::agent_has_session,
             commands::list_skills,
             commands::get_skill,
             commands::save_skill,

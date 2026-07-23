@@ -30,8 +30,8 @@ export const SHORTCUT_DEFS: ShortcutDef[] = [
   },
   {
     id: "focusChat",
-    title: "Focus chat",
-    description: "Focus the chat composer.",
+    title: "Focus assistant",
+    description: "Focus the database assistant composer.",
   },
   {
     id: "runSql",

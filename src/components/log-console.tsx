@@ -45,7 +45,7 @@ function LogLine({ entry }: { entry: LogEntry }) {
 /** Auto-scrolling mono log console with stick-to-bottom. */
 export function LogConsole({
   className,
-  emptyHint = "Activity will show up here as you connect, query, and chat.",
+  emptyHint = "Activity will show up here as you connect, query, and ask the assistant.",
 }: {
   className?: string;
   emptyHint?: string;

@@ -40,10 +40,20 @@ impl Default for AgentSettings {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct AgentHistoryMessage {
+    pub role: String,
+    pub content: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AgentChatRequest {
     pub session_id: Option<Uuid>,
     pub conn_id: Uuid,
     pub message: String,
+    /// Prior UI turns to seed a new in-memory session (e.g. after app restart).
+    #[serde(default)]
+    pub history: Vec<AgentHistoryMessage>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -161,6 +171,10 @@ impl AgentRuntime {
             .read()
             .get(&session_id)
             .map(|s| s.last_context.clone())
+    }
+
+    pub fn has_session(&self, session_id: Uuid) -> bool {
+        self.sessions.read().contains_key(&session_id)
     }
 
     pub fn cancel(&self, session_id: Uuid) {
@@ -330,6 +344,7 @@ impl AgentRuntime {
         }
         {
             let mut sessions = self.sessions.write();
+            let existed = sessions.contains_key(&session_id);
             let session = sessions.entry(session_id).or_insert_with(|| Session {
                 id: session_id,
                 conn_id: req.conn_id,
@@ -354,6 +369,9 @@ impl AgentRuntime {
                     tool_calls: None,
                 }];
                 session.last_context = BudgetReport::default();
+                session.messages.extend(seed_history_messages(&req.history));
+            } else if !existed {
+                session.messages.extend(seed_history_messages(&req.history));
             } else if let Some(first) = session.messages.first_mut() {
                 if first.role == "system" {
                     first.content = system;
@@ -765,6 +783,73 @@ fn truncate_for_event(s: &str) -> String {
         format!("{}…", &s[..2000])
     } else {
         s.to_string()
+    }
+}
+
+const MAX_SEED_HISTORY: usize = 40;
+const MAX_SEED_CONTENT: usize = 8_000;
+
+/// Turn UI transcript into provider messages for a freshly created session.
+fn seed_history_messages(history: &[AgentHistoryMessage]) -> Vec<ChatMessage> {
+    history
+        .iter()
+        .filter_map(|h| {
+            let role = h.role.trim().to_ascii_lowercase();
+            if role != "user" && role != "assistant" {
+                return None;
+            }
+            let content = h.content.trim();
+            if content.is_empty() {
+                return None;
+            }
+            let content = if content.len() > MAX_SEED_CONTENT {
+                format!("{}…", &content[..MAX_SEED_CONTENT])
+            } else {
+                content.to_string()
+            };
+            Some(ChatMessage {
+                role,
+                content,
+                tool_call_id: None,
+                name: None,
+                tool_calls: None,
+            })
+        })
+        .take(MAX_SEED_HISTORY)
+        .collect()
+}
+
+#[cfg(test)]
+mod history_seed_tests {
+    use super::*;
+
+    #[test]
+    fn seeds_user_and_assistant_only() {
+        let seeded = seed_history_messages(&[
+            AgentHistoryMessage {
+                role: "system".into(),
+                content: "ignore".into(),
+            },
+            AgentHistoryMessage {
+                role: "user".into(),
+                content: "list tables".into(),
+            },
+            AgentHistoryMessage {
+                role: "tool".into(),
+                content: "nope".into(),
+            },
+            AgentHistoryMessage {
+                role: "assistant".into(),
+                content: "here they are".into(),
+            },
+            AgentHistoryMessage {
+                role: "user".into(),
+                content: "   ".into(),
+            },
+        ]);
+        assert_eq!(seeded.len(), 2);
+        assert_eq!(seeded[0].role, "user");
+        assert_eq!(seeded[1].role, "assistant");
     }
 }
 

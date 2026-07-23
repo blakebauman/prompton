@@ -275,6 +275,11 @@ pub fn agent_last_context(
 }
 
 #[tauri::command]
+pub fn agent_has_session(state: State<'_, AppState>, session_id: Uuid) -> bool {
+    state.agent.has_session(session_id)
+}
+
+#[tauri::command]
 pub async fn list_ollama_models(
     base_url: Option<String>,
 ) -> AppResult<Vec<crate::agent::ollama::LocalModel>> {

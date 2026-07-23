@@ -49,6 +49,10 @@ import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import {
+  historyForAgentResume,
+  looksLikeToolCallDump,
+} from "@/lib/agent-history";
+import {
   isCurrentAgentSession,
   switchActiveConnection,
 } from "@/lib/session";
@@ -57,12 +61,13 @@ import type { ChatMessage, PendingConfirmation, QueryPage } from "@/lib/types";
 import { useWorkspace } from "@/stores/workspace";
 
 const SUGGESTIONS = [
-  "What tables are in this database?",
-  "Show me a sample of the largest table",
-  "Write a safe SELECT with a LIMIT",
+  "What tables and schemas are available?",
+  "Sample the widest table safely",
+  "Draft a SELECT with LIMIT and explain it",
 ];
 
-export function ChatPanel({
+/** Database assistant panel (natural language → schema/SQL tools). */
+export function AssistantPanel({
   onOpenSettings,
 }: {
   onOpenSettings?: () => void;
@@ -87,6 +92,8 @@ export function ChatPanel({
     clearChat,
     composerDraft,
     setComposerDraft,
+    sessionResumeNotice,
+    setSessionResumeNotice,
   } = useWorkspace();
   const { open: openArtifact } = useArtifact();
   const [input, setInput] = useState("");
@@ -98,7 +105,7 @@ export function ChatPanel({
     setComposerDraft(null);
     window.requestAnimationFrame(() => {
       document
-        .querySelector<HTMLTextAreaElement>("[data-chat-composer]")
+        .querySelector<HTMLTextAreaElement>("[data-assistant-composer]")
         ?.focus();
     });
   }, [composerDraft, setComposerDraft]);
@@ -238,7 +245,7 @@ export function ChatPanel({
         if (!isCurrentAgentSession(p.sessionId)) return;
         const ws = useWorkspace.getState();
         ws.setAgentBusy(false);
-        ws.setStatus("Agent idle");
+        ws.setStatus("Assistant idle");
         if (p.sessionId) {
           const report = await api.agentLastContext(p.sessionId);
           if (cancelled || !isCurrentAgentSession(p.sessionId)) return;
@@ -277,7 +284,7 @@ export function ChatPanel({
           ws.setAgentBusy(false);
           if (p.error === "Cancelled") {
             ws.finalizeRunningTools("output-denied");
-            ws.setStatus("Agent cancelled");
+            ws.setStatus("Assistant cancelled");
             return;
           }
           ws.finalizeRunningTools("output-error");
@@ -339,17 +346,39 @@ export function ChatPanel({
     const text = (textOverride ?? input).trim();
     if (!text || !activeConnId || agentBusy) return;
     if (!textOverride) setInput("");
-    // Bind session id before the first delta so events can be filtered.
-    const nextSession = sessionId ?? crypto.randomUUID();
+
+    // Bind a live session before the first delta. Dead ids (app restart) get a
+    // fresh session seeded from the visible transcript.
+    const prior = useWorkspace.getState().messages;
+    let nextSession = sessionId;
+    let history: ReturnType<typeof historyForAgentResume> = [];
+    if (nextSession) {
+      let alive = false;
+      try {
+        alive = await api.agentHasSession(nextSession);
+      } catch {
+        alive = false;
+      }
+      if (!alive) {
+        nextSession = crypto.randomUUID();
+        history = historyForAgentResume(prior);
+      }
+    } else {
+      nextSession = crypto.randomUUID();
+      history = historyForAgentResume(prior);
+    }
+
     setSessionId(nextSession);
+    setSessionResumeNotice(null);
     addMessage({ id: `u-${Date.now()}`, role: "user", content: text });
     setAgentBusy(true);
-    setStatus("Agent thinking…");
+    setStatus("Assistant thinking…");
     try {
       const id = await api.agentChat({
         sessionId: nextSession,
         connId: activeConnId,
         message: text,
+        history,
       });
       setSessionId(id);
     } catch (e) {
@@ -390,7 +419,7 @@ export function ChatPanel({
     setPendingConfirm(null);
     finalizeRunningTools("output-denied");
     setAgentBusy(false);
-    setStatus("Agent cancelled");
+    setStatus("Assistant cancelled");
   }
 
   return (
@@ -399,7 +428,14 @@ export function ChatPanel({
       <div className="relative z-20 flex h-10 shrink-0 items-center justify-between gap-2 px-4">
         <div className="flex items-center gap-2">
           {agentBusy && <ActivityPulse mode="busy" />}
-          <h2 className="text-base font-bold tracking-tight">Chat</h2>
+          <h2 className="text-base font-bold tracking-tight">Assistant</h2>
+          {active && (
+            <span className="truncate text-[11px] text-muted-foreground">
+              {active.name}
+              {" · "}
+              {active.dialect === "postgres" ? "Postgres" : "SQLite"}
+            </span>
+          )}
         </div>
         <div className="pointer-events-auto flex items-center gap-0.5">
           {agentBusy && (
@@ -427,12 +463,12 @@ export function ChatPanel({
                 }
                 setPendingConfirm(null);
                 clearChat();
-                setStatus("New chat");
-                toast({ title: "Chat cleared" });
+                setStatus("New thread");
+                toast({ title: "New assistant thread" });
               }}
             >
               <MessageSquarePlus className="size-3.5" />
-              New
+              New thread
             </Button>
           )}
         </div>
@@ -443,8 +479,8 @@ export function ChatPanel({
           {!activeConnId ? (
             <div className="flex flex-1 items-center justify-center px-2 py-6">
               <SetupChecklist
-                title="Get ready to chat"
-                description="Connect a database, then ask in natural language or SQL."
+                title="Connect a database first"
+                description="The assistant inspects schema, drafts SQL, and runs reads against your connection."
                 items={[
                   {
                     id: "database",
@@ -488,8 +524,8 @@ export function ChatPanel({
           ) : showEmpty ? (
             <ConversationEmptyState
               icon={<DatabaseIcon className="size-7 opacity-40" />}
-              title="Ask Prompton"
-              description="Natural language or SQL. The agent keeps context small and inspectable."
+              title="Ask about this database"
+              description="Schema, samples, EXPLAIN, and safe SELECTs — with writes gated for approval."
             />
           ) : (
             messages.map((m) => (
@@ -508,6 +544,14 @@ export function ChatPanel({
       </Conversation>
 
       <div className="space-y-2 border-t border-border/60 p-2.5">
+        {sessionResumeNotice && (
+          <ActionNotice
+            tone="neutral"
+            className="px-2.5 py-2"
+            title="Context will reload"
+            description={sessionResumeNotice}
+          />
+        )}
         {active?.isProduction && !active.adminWritesUnlocked && (
           <ActionNotice
             tone="prod"
@@ -537,13 +581,13 @@ export function ChatPanel({
           }
         >
           <PromptInputTextarea
-            data-chat-composer
+            data-assistant-composer
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={
               activeConnId
-                ? "Ask about your data…"
-                : "Connect a database to start chatting…"
+                ? "Ask about schema, data, or SQL…"
+                : "Connect a database to use the assistant…"
             }
             disabled={!activeConnId || agentBusy}
             onSubmit={() => {
@@ -552,7 +596,9 @@ export function ChatPanel({
           />
           <PromptInputFooter>
             <span className="px-1 text-[11px] text-muted-foreground/70">
-              {activeConnId ? "↵ send · ⇧↵ newline" : "Connect to enable chat"}
+              {activeConnId
+                ? "↵ send · ⇧↵ newline"
+                : "Connect to enable the assistant"}
             </span>
             <PromptInputSubmit
               status={status}
@@ -831,14 +877,5 @@ function artifactKindForTool(
   }
 }
 
-function looksLikeToolCallDump(content: string): boolean {
-  const t = content.trim();
-  if (!t.startsWith("{")) return false;
-  try {
-    const obj = JSON.parse(t) as { name?: string; arguments?: unknown };
-    return typeof obj.name === "string" && "arguments" in obj;
-  } catch {
-    // Concatenated JSON objects
-    return /^\{\s*"name"\s*:/.test(t) && t.includes('"arguments"');
-  }
-}
+/** @deprecated Prefer AssistantPanel */
+export const ChatPanel = AssistantPanel;

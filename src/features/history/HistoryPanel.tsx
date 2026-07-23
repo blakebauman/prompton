@@ -351,7 +351,7 @@ export function HistoryPanel({
                   className="min-h-40 p-4"
                   icon={<History className="size-8" />}
                   title="No history yet"
-                  description="Runs from Chat and SQL will show up here."
+                  description="Runs from the Assistant and SQL editor will show up here."
                 />
               ) : filtered.length === 0 ? (
                 <EmptyState

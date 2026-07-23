@@ -253,7 +253,7 @@ function OpenArtifactPane() {
                 ) : (
                   <EmptyArtifact
                     title="No agent context yet"
-                    description="After a chat turn, inspect what Prompton sent to the model."
+                    description="After an assistant turn, inspect what Prompton sent to the model."
                   />
                 )}
               </div>

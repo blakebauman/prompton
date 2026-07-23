@@ -30,7 +30,7 @@ function defaultWelcome(content: string): ChatMessage {
 export function defaultConnectionMessages(): ChatMessage[] {
   return [
     defaultWelcome(
-      "Connection context restored. Ask a question or run SQL.",
+      "Connection ready. Ask about tables, draft SQL, or inspect schema.",
     ),
   ];
 }

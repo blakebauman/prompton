@@ -119,9 +119,12 @@ export const api = {
     sessionId?: string | null;
     connId: string;
     message: string;
+    history?: Array<{ role: "user" | "assistant"; content: string }>;
   }) => invoke<string>("agent_chat", { request }),
   agentCancel: (sessionId: string) =>
     invoke<void>("agent_cancel", { sessionId }),
+  agentHasSession: (sessionId: string) =>
+    invoke<boolean>("agent_has_session", { sessionId }),
   discardPendingWrite: (args?: {
     confirmationId?: string | null;
     connId?: string | null;

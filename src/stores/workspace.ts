@@ -25,8 +25,10 @@ interface WorkspaceState {
   contextReport: BudgetReport | null;
   explainPlan: string | null;
   status: string;
-  /** One-shot draft to prefill the chat composer (e.g. Library → Chat). */
+  /** One-shot draft to prefill the assistant composer (e.g. Library → Assistant). */
   composerDraft: string | null;
+  /** Shown when a restored thread has no live Rust session (app restart). */
+  sessionResumeNotice: string | null;
 
   setConnections: (c: ConnectionInfo[]) => void;
   setActiveConnId: (id: string | null) => void;
@@ -50,7 +52,8 @@ interface WorkspaceState {
   setExplainPlan: (plan: string | null) => void;
   setStatus: (s: string) => void;
   setComposerDraft: (draft: string | null) => void;
-  /** Clear the chat thread without wiping SQL results / explain. */
+  setSessionResumeNotice: (notice: string | null) => void;
+  /** Clear the assistant thread without wiping SQL results / explain. */
   clearChat: () => void;
   resetChatForConnection: () => void;
 }
@@ -78,6 +81,7 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
   explainPlan: null,
   status: "Ready",
   composerDraft: null,
+  sessionResumeNotice: null,
 
   setConnections: (connections) => set({ connections }),
   setActiveConnId: (activeConnId) => set({ activeConnId }),
@@ -120,6 +124,7 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
   setExplainPlan: (explainPlan) => set({ explainPlan }),
   setStatus: (status) => set({ status }),
   setComposerDraft: (composerDraft) => set({ composerDraft }),
+  setSessionResumeNotice: (sessionResumeNotice) => set({ sessionResumeNotice }),
   clearChat: () =>
     set({
       sessionId: null,
@@ -127,11 +132,12 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
       pendingConfirm: null,
       contextReport: null,
       composerDraft: null,
+      sessionResumeNotice: null,
       messages: [
         {
           id: "welcome",
           role: "assistant",
-          content: "New chat. Ask a question or run SQL.",
+          content: "New thread. Ask about this database or draft SQL.",
         },
       ],
     }),
@@ -146,11 +152,12 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
       pendingConfirm: null,
       contextReport: null,
       composerDraft: null,
+      sessionResumeNotice: null,
       messages: [
         {
           id: "welcome",
           role: "assistant",
-          content: "Connection context reset. Ask a question or run SQL.",
+          content: "Connection context reset. Ask about tables, or run SQL.",
         },
       ],
     }),

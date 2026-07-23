@@ -30,7 +30,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ChatPanel } from "@/features/chat/ChatPanel";
+import { AssistantPanel } from "@/features/chat/ChatPanel";
 import { ConnectionsPanel } from "@/features/connections/ConnectionsPanel";
 import { HistoryPanel } from "@/features/history/HistoryPanel";
 import { LibraryPanel } from "@/features/library/LibraryPanel";
@@ -134,7 +134,7 @@ function AppShell() {
       setActivity("workspace");
       window.requestAnimationFrame(() => {
         document
-          .querySelector<HTMLTextAreaElement>("[data-chat-composer]")
+          .querySelector<HTMLTextAreaElement>("[data-assistant-composer]")
           ?.focus();
       });
     },
@@ -265,7 +265,7 @@ function AppShell() {
                   defaultSize={artifact.open ? "38" : "82"}
                   minSize="28"
                 >
-                  <ChatPanel
+                  <AssistantPanel
                     onOpenSettings={() => setActivity("settings")}
                   />
                 </ResizablePanel>
@@ -292,7 +292,7 @@ function AppShell() {
                   window.requestAnimationFrame(() => {
                     document
                       .querySelector<HTMLTextAreaElement>(
-                        "[data-chat-composer]",
+                        "[data-assistant-composer]",
                       )
                       ?.focus();
                   });

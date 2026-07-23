@@ -255,7 +255,7 @@ export function LibraryPanel({
     }
   }
 
-  function useInChat() {
+  function useInAssistant() {
     const text =
       tab === "skills"
         ? skillBody.trim() || skillDesc.trim()
@@ -270,9 +270,9 @@ export function LibraryPanel({
         : text;
     setComposerDraft(draft);
     onOpenWorkspace?.();
-    setStatus("Loaded into chat");
+    setStatus("Loaded into assistant");
     toast({
-      title: "Loaded into chat",
+      title: "Loaded into assistant",
       description:
         tab === "skills" ? selectedSkill ?? "Skill" : promptTitle || "Prompt",
       tone: "success",
@@ -448,10 +448,10 @@ export function LibraryPanel({
                       ? !skillBody.trim() && !skillDesc.trim()
                       : !promptBody.trim()
                   }
-                  onClick={useInChat}
+                  onClick={useInAssistant}
                 >
                   <MessageSquare className="size-3.5" />
-                  Use in chat
+                  Use in assistant
                 </Button>
                 <Button
                   size="xs"

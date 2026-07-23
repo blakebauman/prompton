@@ -1,3 +1,6 @@
+import {
+  hasAssistantTranscript,
+} from "@/lib/agent-history";
 import { api } from "@/lib/tauri";
 import { cancelActiveQuery } from "@/lib/run-query";
 import {
@@ -10,6 +13,29 @@ import {
   saveWorkspaceSnapshot,
 } from "@/lib/workspace-persist";
 import { useWorkspace } from "@/stores/workspace";
+
+const RESUME_NOTICE =
+  "Thread restored after restart. Your next message reloads context into the assistant.";
+
+/** Drop persisted session ids that no longer exist in the Rust agent runtime. */
+export async function reconcileLiveSession(): Promise<boolean> {
+  const s = useWorkspace.getState();
+  if (!s.sessionId) return false;
+  let alive = false;
+  try {
+    alive = await api.agentHasSession(s.sessionId);
+  } catch {
+    alive = false;
+  }
+  if (alive) return false;
+  const notice = hasAssistantTranscript(s.messages) ? RESUME_NOTICE : null;
+  useWorkspace.setState({
+    sessionId: null,
+    sessionResumeNotice: notice,
+  });
+  persistActiveDraft();
+  return true;
+}
 
 async function cancelInflightWork() {
   const s = useWorkspace.getState();
@@ -87,8 +113,10 @@ export async function switchActiveConnection(
       pendingConfirm: null,
       contextReport: null,
       composerDraft: null,
+      sessionResumeNotice: null,
     });
     saveWorkspaceSnapshot({ activeConnId: nextId });
+    await reconcileLiveSession();
   } else {
     const orphanSql = loadWorkspaceSnapshot().orphanSql || "SELECT 1;";
     useWorkspace.setState({
@@ -103,12 +131,13 @@ export async function switchActiveConnection(
       contextReport: null,
       composerDraft: null,
       sessionId: null,
+      sessionResumeNotice: null,
       messages: [
         {
           id: "welcome",
           role: "assistant",
           content:
-            "I'm Prompton. Connect a database, then ask in natural language or write SQL directly.",
+            "I'm Prompton. Connect a database, then ask about schema, data, or SQL.",
         },
       ],
     });
