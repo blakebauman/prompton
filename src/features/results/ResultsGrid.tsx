@@ -7,7 +7,9 @@ import {
   Download,
   FileCode2,
   FileJson,
+  MoreHorizontal,
   Play,
+  Square,
   Table2,
 } from "lucide-react";
 
@@ -689,63 +691,62 @@ export function ResultsGrid() {
 
   const rows = result.rows;
 
-  const sqlPreview = result.sql.trim().replace(/\s+/g, " ");
+  const metaTitle = [
+    result.sql.trim() || null,
+    canEdit ? "Double-click a cell to edit" : null,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex min-h-9 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-2 py-1 text-[11px] text-muted-foreground">
-        <div className="min-w-0 flex-1 px-1 leading-tight">
-          <div className="truncate">
-            <span className="font-medium text-foreground">
-              {result.totalRows.toLocaleString()}
-            </span>{" "}
-            rows
-            {result.truncated
-              ? ` · first ${(result.rowCap ?? result.totalRows).toLocaleString()} (capped)`
-              : ""}
-            {" · "}
-            {result.durationMs}ms
-            {result.affectedRows != null
-              ? ` · ${result.affectedRows} affected`
-              : ""}
-            {loadedRowCount(result) < result.totalRows
-              ? ` · ${loadedRowCount(result).toLocaleString()} loaded`
-              : ""}
-            {selected.size > 0
-              ? ` · ${selected.size} cell${selected.size === 1 ? "" : "s"} selected · ⌘C copy`
-              : ""}
-            {canEdit ? " · double-click to edit" : ""}
-          </div>
-          {sqlPreview && (
-            <div
-              className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground/70"
-              title={result.sql}
-            >
-              {sqlPreview}
-            </div>
-          )}
+      <div className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-2 text-[11px] text-muted-foreground">
+        <div
+          className="min-w-0 flex-1 truncate px-1"
+          title={metaTitle || undefined}
+        >
+          <span className="font-medium text-foreground">
+            {result.totalRows.toLocaleString()}
+          </span>{" "}
+          rows
+          {result.truncated
+            ? ` · first ${(result.rowCap ?? result.totalRows).toLocaleString()} (capped)`
+            : ""}
+          {" · "}
+          {result.durationMs}ms
+          {result.affectedRows != null
+            ? ` · ${result.affectedRows} affected`
+            : ""}
+          {loadedRowCount(result) < result.totalRows
+            ? ` · ${loadedRowCount(result).toLocaleString()} loaded`
+            : ""}
+          {selected.size > 0
+            ? ` · ${selected.size} selected`
+            : ""}
         </div>
         <div className="flex shrink-0 items-center gap-0.5">
           <Button
-            size="xs"
+            size="icon-xs"
             variant="ghost"
+            title="Open SQL"
+            aria-label="Open SQL in editor"
             onClick={() => {
               setSql(result.sql);
               openArtifact("sql");
             }}
           >
             <FileCode2 className="size-3.5" />
-            SQL
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                size="xs"
+                size="icon-xs"
                 variant="ghost"
+                title="Copy"
+                aria-label="Copy"
                 disabled={!result.sql.trim() && selected.size === 0}
               >
                 <Copy className="size-3.5" />
-                Copy
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-44">
@@ -769,14 +770,20 @@ export function ResultsGrid() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          {columns.length > 1 && (
+          {columns.length > 0 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="xs" variant="ghost">
+                <Button
+                  size="icon-xs"
+                  variant={hiddenColumns.size > 0 ? "secondary" : "ghost"}
+                  title={
+                    hiddenColumns.size > 0
+                      ? `Columns · ${visibleColumns.length}/${columns.length}`
+                      : "Columns"
+                  }
+                  aria-label="Columns"
+                >
                   <Columns3 className="size-3.5" />
-                  {hiddenColumns.size > 0
-                    ? `${visibleColumns.length}/${columns.length}`
-                    : "Columns"}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-52">
@@ -808,34 +815,39 @@ export function ResultsGrid() {
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-          <Button
-            size="xs"
-            variant="ghost"
-            disabled={result.totalRows === 0}
-            onClick={() => openArtifact("chart")}
-          >
-            <ChartColumn className="size-3.5" />
-            Chart
-          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                size="xs"
+                size="icon-xs"
                 variant="ghost"
-                disabled={exporting || result.totalRows === 0}
+                title="More"
+                aria-label="More results actions"
+                disabled={exporting}
               >
-                <Download className="size-3.5" />
-                {exporting ? "…" : "Export"}
+                <MoreHorizontal className="size-3.5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-48">
               <DropdownMenuItem
+                disabled={result.totalRows === 0}
+                onClick={() => openArtifact("chart")}
+              >
+                <ChartColumn className="size-3.5" />
+                Chart
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-[11px] font-normal text-muted-foreground">
+                Export
+              </DropdownMenuLabel>
+              <DropdownMenuItem
+                disabled={result.totalRows === 0}
                 onClick={() => void exportResults("csv", "all")}
               >
-                <Table2 className="size-3.5" />
+                <Download className="size-3.5" />
                 {result.truncated ? "CSV · capped result" : "CSV · all loaded"}
               </DropdownMenuItem>
               <DropdownMenuItem
+                disabled={result.totalRows === 0}
                 onClick={() => void exportResults("csv", "loaded")}
               >
                 <Table2 className="size-3.5" />
@@ -850,12 +862,14 @@ export function ResultsGrid() {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
+                disabled={result.totalRows === 0}
                 onClick={() => void exportResults("json", "all")}
               >
                 <FileJson className="size-3.5" />
                 {result.truncated ? "JSON · capped result" : "JSON · all loaded"}
               </DropdownMenuItem>
               <DropdownMenuItem
+                disabled={result.totalRows === 0}
                 onClick={() => void exportResults("json", "loaded")}
               >
                 <FileJson className="size-3.5" />
@@ -872,11 +886,13 @@ export function ResultsGrid() {
           </DropdownMenu>
           {running && activeQueryId && (
             <Button
-              size="xs"
+              size="icon-xs"
               variant="ghost"
+              title="Cancel query"
+              aria-label="Cancel query"
               onClick={() => void cancelActiveQuery()}
             >
-              Cancel
+              <Square className="size-3.5" />
             </Button>
           )}
         </div>
