@@ -9,7 +9,6 @@ import {
 
 import { useArtifact } from "@/components/artifact/artifact-context";
 import { DialectIcon, dialectLabel } from "@/components/brand-icon";
-import { KeyCapChord } from "@/components/key-cap";
 import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,11 +18,12 @@ import {
   FORMAT_SQL_EVENT,
   RUN_SQL_EVENT,
 } from "@/hooks/use-app-shortcuts";
-import { formatSql } from "@/lib/format-sql";
 import {
   handleMaybeLostConnection,
   isConnectionLostError,
 } from "@/lib/connection-health";
+import { formatSql } from "@/lib/format-sql";
+import { displayLabelForKey, sortChordKeys } from "@/lib/key-codes";
 import {
   cancelActiveQuery,
   confirmCancellableWrite,
@@ -35,6 +35,10 @@ import { api } from "@/lib/tauri";
 import type { PendingConfirmation } from "@/lib/types";
 import { useShortcuts } from "@/stores/shortcuts";
 import { useWorkspace } from "@/stores/workspace";
+
+function chordLabel(keys: string[]): string {
+  return sortChordKeys(keys).map(displayLabelForKey).join("");
+}
 
 export function SqlEditor() {
   const {
@@ -216,49 +220,49 @@ export function SqlEditor() {
     };
   }, []);
 
+  const runTitle = mutating
+    ? "Review write"
+    : `Run${runSqlChord.length ? ` · ${chordLabel(runSqlChord)}` : ""}`;
+  const formatTitle = `Format${
+    formatSqlChord.length ? ` · ${chordLabel(formatSqlChord)}` : ""
+  }`;
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-2">
-        <span className="flex min-w-0 items-center gap-2 truncate px-1 text-[11px] text-muted-foreground">
+        <span className="flex min-w-0 items-center gap-1.5 truncate px-1 text-[11px] text-muted-foreground">
           {activeConnId ? (
             <>
               <span className="truncate font-medium text-foreground">
                 {active?.name ?? "Connection"}
               </span>
-              <span aria-hidden>·</span>
               {active?.dialect ? (
-                <span className="inline-flex items-center gap-1">
-                  <DialectIcon
-                    dialect={active.dialect}
-                    className="size-3 opacity-80"
-                  />
-                  {dialectLabel(active.dialect)}
-                </span>
-              ) : (
-                <span>SQL</span>
-              )}
-              <span aria-hidden>·</span>
-              {mutating ? (
-                <span className="text-destructive">
-                  {statementCount > 1
-                    ? `${statementCount} stmts · write · approval`
-                    : "Write · approval"}
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5">
-                  {statementCount > 1 && (
-                    <>
-                      <span>{statementCount} stmts</span>
-                      <span aria-hidden>·</span>
-                    </>
-                  )}
-                  <KeyCapChord keys={runSqlChord} className="scale-90" />
-                  <span>run</span>
+                <>
                   <span aria-hidden>·</span>
-                  <KeyCapChord keys={formatSqlChord} className="scale-90" />
-                  <span>format</span>
-                </span>
-              )}
+                  <span className="inline-flex items-center gap-1">
+                    <DialectIcon
+                      dialect={active.dialect}
+                      className="size-3 opacity-80"
+                    />
+                    {dialectLabel(active.dialect)}
+                  </span>
+                </>
+              ) : null}
+              {mutating ? (
+                <>
+                  <span aria-hidden>·</span>
+                  <span className="text-destructive">
+                    {statementCount > 1
+                      ? `${statementCount} stmts · write`
+                      : "Write · approval"}
+                  </span>
+                </>
+              ) : statementCount > 1 ? (
+                <>
+                  <span aria-hidden>·</span>
+                  <span>{statementCount} stmts</span>
+                </>
+              ) : null}
             </>
           ) : (
             "Select a connection to run"
@@ -267,44 +271,50 @@ export function SqlEditor() {
         <div className="flex shrink-0 items-center gap-0.5">
           {running && activeQueryId && (
             <Button
-              size="xs"
+              size="icon-xs"
               variant="ghost"
+              title="Cancel query"
+              aria-label="Cancel query"
               onClick={() => void cancelActiveQuery()}
             >
               <Square className="size-3.5" />
-              Cancel
             </Button>
           )}
           <Button
-            size="xs"
+            size="icon-xs"
             variant="ghost"
+            title="Copy SQL"
+            aria-label="Copy SQL"
             disabled={!sql.trim()}
             onClick={() => void copySql()}
           >
             <Copy className="size-3.5" />
-            Copy
           </Button>
           <Button
-            size="xs"
+            size="icon-xs"
             variant="ghost"
+            title={formatTitle}
+            aria-label={formatTitle}
             disabled={!sql.trim()}
             onClick={onFormat}
           >
             <AlignLeft className="size-3.5" />
-            Format
           </Button>
           <Button
-            size="xs"
+            size="icon-xs"
             variant="ghost"
+            title="Explain"
+            aria-label="Explain query"
             onClick={() => void explain()}
             disabled={running || !activeConnId || !sql.trim()}
           >
             <CircleHelp className="size-3.5" />
-            Explain
           </Button>
           <Button
             size="xs"
             variant={mutating ? "destructive" : "default"}
+            title={runTitle}
+            aria-label={runTitle}
             onClick={() => void run()}
             disabled={running || !activeConnId || !sql.trim()}
           >
