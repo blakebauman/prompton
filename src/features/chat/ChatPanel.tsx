@@ -456,8 +456,8 @@ export function AssistantPanel({
   return (
     <div className="relative flex h-full flex-col overflow-hidden">
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-gradient-to-b from-background to-transparent" />
-      <div className="relative z-20 flex h-10 shrink-0 items-center justify-between gap-2 px-4">
-        <div className="flex min-w-0 items-center gap-2.5">
+      <div className="relative z-20 flex h-9 shrink-0 items-center justify-between gap-2 px-3">
+        <div className="flex min-w-0 items-center gap-2">
           {agentBusy && <ActivityPulse mode="busy" />}
           <h2 className="min-w-0" aria-label="Prompton">
             <BrandMark size="md" />
@@ -473,15 +473,22 @@ export function AssistantPanel({
         </div>
         <div className="pointer-events-auto flex items-center gap-0.5">
           {agentBusy && (
-            <Button size="xs" variant="ghost" onClick={stopAgent}>
+            <Button
+              size="icon-xs"
+              variant="ghost"
+              title="Stop"
+              aria-label="Stop assistant"
+              onClick={stopAgent}
+            >
               <SquareIcon className="size-3.5" />
-              Stop
             </Button>
           )}
           {activeConnId && !showEmpty && (
             <Button
-              size="xs"
+              size="icon-xs"
               variant="ghost"
+              title="New thread"
+              aria-label="New assistant thread"
               disabled={agentBusy}
               onClick={() => {
                 if (sessionId) {
@@ -502,7 +509,6 @@ export function AssistantPanel({
               }}
             >
               <MessageSquarePlus className="size-3.5" />
-              New thread
             </Button>
           )}
         </div>
@@ -591,11 +597,11 @@ export function AssistantPanel({
         <ConversationScrollButton />
       </Conversation>
 
-      <div className="space-y-2 border-t border-border/60 p-2.5">
+      <div className="space-y-1.5 border-t border-border/60 p-2">
         {sessionResumeNotice && (
           <ActionNotice
             tone="neutral"
-            className="px-2.5 py-2"
+            className="px-2 py-1.5"
             title="Context will reload"
             description={sessionResumeNotice}
           />
@@ -603,7 +609,7 @@ export function AssistantPanel({
         {active?.isProduction && !active.adminWritesUnlocked && (
           <ActionNotice
             tone="prod"
-            className="px-2.5 py-2"
+            className="px-2 py-1.5"
             icon={<Lock className="size-3.5" />}
             title="Production writes need approval"
             description="Mutating SQL pauses for your approval. Admin unlock is not required."
