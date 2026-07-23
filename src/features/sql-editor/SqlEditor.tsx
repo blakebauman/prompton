@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 
 import { useArtifact } from "@/components/artifact/artifact-context";
+import { DialectIcon, dialectLabel } from "@/components/brand-icon";
 import { KeyCapChord } from "@/components/key-cap";
 import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { Button } from "@/components/ui/button";
@@ -225,7 +226,17 @@ export function SqlEditor() {
                 {active?.name ?? "Connection"}
               </span>
               <span aria-hidden>·</span>
-              <span className="capitalize">{active?.dialect ?? "sql"}</span>
+              {active?.dialect ? (
+                <span className="inline-flex items-center gap-1">
+                  <DialectIcon
+                    dialect={active.dialect}
+                    className="size-3 opacity-80"
+                  />
+                  {dialectLabel(active.dialect)}
+                </span>
+              ) : (
+                <span>SQL</span>
+              )}
               <span aria-hidden>·</span>
               {mutating ? (
                 <span className="text-destructive">

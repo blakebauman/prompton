@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { useArtifact } from "@/components/artifact/artifact-context";
+import { DialectIcon, dialectLabel } from "@/components/brand-icon";
 import { ConnectionStatus } from "@/components/connection-status";
 import { EmptyState } from "@/components/empty-state";
 import {
@@ -404,7 +405,10 @@ export function ConnectionsPanel() {
                       {c.connected ? "Connected" : "Offline"}
                     </span>
                     <span aria-hidden>·</span>
-                    <span className="capitalize">{c.dialect}</span>
+                    <span className="inline-flex items-center gap-1">
+                      <DialectIcon dialect={c.dialect} className="size-3 opacity-80" />
+                      {dialectLabel(c.dialect)}
+                    </span>
                     {c.isProduction && (
                       <ProdBadge compact unlocked={!!c.adminWritesUnlocked} />
                     )}
@@ -610,9 +614,18 @@ export function ConnectionsPanel() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="sqlite">SQLite</SelectItem>
-                  <SelectItem value="postgres">PostgreSQL</SelectItem>
-                  <SelectItem value="mysql">MySQL</SelectItem>
+                  <SelectItem value="sqlite">
+                    <DialectIcon dialect="sqlite" />
+                    SQLite
+                  </SelectItem>
+                  <SelectItem value="postgres">
+                    <DialectIcon dialect="postgres" />
+                    PostgreSQL
+                  </SelectItem>
+                  <SelectItem value="mysql">
+                    <DialectIcon dialect="mysql" />
+                    MySQL
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

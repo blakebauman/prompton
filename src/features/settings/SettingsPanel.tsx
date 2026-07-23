@@ -3,6 +3,7 @@ import { BookOpen, Code2, KeyRound, Server, Sparkles } from "lucide-react";
 
 import { ActionNotice } from "@/components/action-notice";
 import { useArtifact } from "@/components/artifact/artifact-context";
+import { ProviderIcon, providerLabel } from "@/components/brand-icon";
 import { CopyableSnippet } from "@/components/copyable-snippet";
 import { LinkTile } from "@/components/link-tile";
 import { LogConsole } from "@/components/log-console";
@@ -164,15 +165,22 @@ export function SettingsPanel() {
                     value={kind}
                     onValueChange={(v) => setKind(v as ProviderKind)}
                   >
-                    <SelectTrigger size="sm" className="w-[180px]">
+                    <SelectTrigger size="sm" className="w-[210px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ollama">Ollama (local)</SelectItem>
-                      <SelectItem value="openaiCompatible">
-                        OpenAI-compatible
+                      <SelectItem value="ollama">
+                        <ProviderIcon kind="ollama" />
+                        {providerLabel("ollama")}
                       </SelectItem>
-                      <SelectItem value="anthropic">Anthropic</SelectItem>
+                      <SelectItem value="openaiCompatible">
+                        <ProviderIcon kind="openaiCompatible" />
+                        {providerLabel("openaiCompatible")}
+                      </SelectItem>
+                      <SelectItem value="anthropic">
+                        <ProviderIcon kind="anthropic" />
+                        {providerLabel("anthropic")}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 }

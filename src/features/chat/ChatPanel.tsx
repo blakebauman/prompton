@@ -44,6 +44,7 @@ import {
 import { ActionNotice } from "@/components/action-notice";
 import { ActivityPulse } from "@/components/activity-pulse";
 import { useArtifact } from "@/components/artifact/artifact-context";
+import { DialectIcon, dialectLabel } from "@/components/brand-icon";
 import { BrandMark } from "@/components/brand-mark";
 import { SetupChecklist } from "@/components/setup-checklist";
 import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
@@ -433,14 +434,11 @@ export function AssistantPanel({
             <BrandMark size="md" />
           </h2>
           {active && (
-            <span className="truncate text-[11px] text-muted-foreground">
-              {active.name}
-              {" · "}
-              {active.dialect === "postgres"
-                ? "Postgres"
-                : active.dialect === "mysql"
-                  ? "MySQL"
-                  : "SQLite"}
+            <span className="inline-flex min-w-0 items-center gap-1.5 truncate text-[11px] text-muted-foreground">
+              <span className="truncate">{active.name}</span>
+              <span aria-hidden>·</span>
+              <DialectIcon dialect={active.dialect} className="size-3 opacity-80" />
+              <span>{dialectLabel(active.dialect)}</span>
             </span>
           )}
         </div>
