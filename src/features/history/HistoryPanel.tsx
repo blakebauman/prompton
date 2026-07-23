@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Bot, Copy, Database, History, Play, Trash2 } from "lucide-react";
+import {
+  Bot,
+  Copy,
+  Database,
+  FileCode2,
+  History,
+  ListFilter,
+  MessageSquarePlus,
+  Play,
+  Trash2,
+} from "lucide-react";
 
 import { useArtifact } from "@/components/artifact/artifact-context";
 import {
@@ -24,12 +34,15 @@ import {
 import { UnderlineTab, UnderlineTabs } from "@/components/underline-tabs";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
 import {
   ensureConnectionAlive,
@@ -52,9 +65,9 @@ type StatusFilter = "all" | "ok" | "error";
 
 function KindIcon({ kind }: { kind: HistoryKind }) {
   if (kind === "agent") {
-    return <Bot className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />;
+    return <Bot className="size-3.5 shrink-0 text-muted-foreground" />;
   }
-  return <Database className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />;
+  return <Database className="size-3.5 shrink-0 text-muted-foreground" />;
 }
 
 function statusTone(status: string): "ok" | "error" | "other" {
@@ -62,6 +75,18 @@ function statusTone(status: string): "ok" | "error" | "other" {
   if (s === "ok" || s === "success") return "ok";
   if (s === "error" || s === "failed") return "error";
   return "other";
+}
+
+function entryMetaLine(e: HistoryEntry): string {
+  const parts: string[] = [formatWhen(e.createdAt)];
+  if (e.connName) parts.push(e.connName);
+  if (e.meta?.totalRows != null) {
+    parts.push(`${e.meta.totalRows.toLocaleString()} rows`);
+  }
+  if (e.meta?.durationMs != null) {
+    parts.push(`${e.meta.durationMs}ms`);
+  }
+  return parts.join(" · ");
 }
 
 /** Query / agent history — list+detail over on-disk history.json. */
@@ -75,6 +100,7 @@ export function HistoryPanel({
     setSql,
     setResult,
     setSchemas,
+    setComposerDraft,
     activeConnId,
     connections,
   } = useWorkspace();
@@ -85,7 +111,7 @@ export function HistoryPanel({
   const [kindFilter, setKindFilter] = useState<KindFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [connFilter, setConnFilter] = useState<string>("all");
-  const [rerunning, setRerunning] = useState(false);
+  const [rerunningId, setRerunningId] = useState<string | null>(null);
 
   const connOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -97,6 +123,9 @@ export function HistoryPanel({
     }
     return [...map.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   }, [entries, connections]);
+
+  const filterCount =
+    (statusFilter !== "all" ? 1 : 0) + (connFilter !== "all" ? 1 : 0);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -120,9 +149,10 @@ export function HistoryPanel({
     });
   }, [entries, query, kindFilter, statusFilter, connFilter]);
 
-  const selected = filtered.find((e) => e.id === selectedId)
-    ?? entries.find((e) => e.id === selectedId)
-    ?? null;
+  const selected =
+    filtered.find((e) => e.id === selectedId) ??
+    entries.find((e) => e.id === selectedId) ??
+    null;
 
   const refresh = useCallback(async () => {
     try {
@@ -193,11 +223,29 @@ export function HistoryPanel({
     toast({ title: "SQL loaded", tone: "success" });
   }
 
+  function useInAssistant(entry: HistoryEntry) {
+    const draft = entry.body.trim();
+    if (!draft) {
+      toast({ title: "Nothing to send", description: "Empty transcript." });
+      return;
+    }
+    setComposerDraft(draft);
+    onOpenWorkspace?.();
+    setStatus("Loaded into assistant");
+    toast({
+      title: "Loaded into assistant",
+      description: entry.title,
+      tone: "success",
+    });
+  }
+
   async function ensureTargetConnection(connId: string): Promise<boolean> {
     if (activeConnId !== connId) {
       await switchActiveConnection(connId);
     }
-    const conn = useWorkspace.getState().connections.find((c) => c.id === connId);
+    const conn = useWorkspace
+      .getState()
+      .connections.find((c) => c.id === connId);
     if (!conn) {
       toast({
         title: "Connection missing",
@@ -240,7 +288,7 @@ export function HistoryPanel({
       });
       return;
     }
-    setRerunning(true);
+    setRerunningId(entry.id);
     try {
       const ok = await ensureTargetConnection(connId);
       if (!ok) return;
@@ -265,7 +313,7 @@ export function HistoryPanel({
         tone: "error",
       });
     } finally {
-      setRerunning(false);
+      setRerunningId(null);
     }
   }
 
@@ -305,45 +353,80 @@ export function HistoryPanel({
                 </UnderlineTab>
               ))}
             </UnderlineTabs>
-            <div className="mb-1.5 flex items-center gap-1.5">
-              <Select
-                value={statusFilter}
-                onValueChange={(v) => setStatusFilter(v as StatusFilter)}
-              >
-                <SelectTrigger size="sm" className="h-7 flex-1 text-[11px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="ok">Ok</SelectItem>
-                  <SelectItem value="error">Error</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select
-                value={connFilter}
-                onValueChange={setConnFilter}
-              >
-                <SelectTrigger size="sm" className="h-7 flex-1 text-[11px]">
-                  <SelectValue placeholder="Connection" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All connections</SelectItem>
-                  {connOptions.map(([id, name]) => (
-                    <SelectItem key={id} value={id}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="mb-1 flex items-center gap-1.5">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="xs"
+                    variant={filterCount > 0 ? "secondary" : "ghost"}
+                    className="shrink-0"
+                  >
+                    <ListFilter className="size-3.5" />
+                    Filters
+                    {filterCount > 0 && (
+                      <span className="tabular-nums text-muted-foreground">
+                        {filterCount}
+                      </span>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-52">
+                  <DropdownMenuLabel className="text-[11px] font-normal text-muted-foreground">
+                    Status
+                  </DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={statusFilter}
+                    onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+                  >
+                    <DropdownMenuRadioItem value="all">
+                      All statuses
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="ok">Ok</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="error">
+                      Error
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-[11px] font-normal text-muted-foreground">
+                    Connection
+                  </DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={connFilter}
+                    onValueChange={setConnFilter}
+                  >
+                    <DropdownMenuRadioItem value="all">
+                      All connections
+                    </DropdownMenuRadioItem>
+                    {connOptions.map(([id, name]) => (
+                      <DropdownMenuRadioItem key={id} value={id}>
+                        {name}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                  {filterCount > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setStatusFilter("all");
+                          setConnFilter("all");
+                        }}
+                      >
+                        Clear filters
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <ListPaneSearch
+                value={query}
+                onChange={setQuery}
+                placeholder="Search history…"
+                className="mb-0 min-w-0 flex-1"
+              />
             </div>
-            <ListPaneSearch
-              value={query}
-              onChange={setQuery}
-              placeholder="Search history…"
-              className="mb-1"
-            />
           </ListPaneHeader>
-          <ListPaneScroll className="pt-40">
+          <ListPaneScroll className="pt-28">
             <div className="space-y-0.5 px-1">
               {entries.length === 0 ? (
                 <EmptyState
@@ -363,44 +446,93 @@ export function HistoryPanel({
                 filtered.map((e) => {
                   const active = selectedId === e.id;
                   const tone = statusTone(e.status);
+                  const busy = rerunningId === e.id;
                   return (
-                    <button
-                      key={e.id}
-                      type="button"
-                      className={cn(
-                        "flex w-full items-start gap-2 rounded-md border p-2.5 text-left transition-colors",
-                        active
-                          ? "border-border bg-muted/70"
-                          : "border-transparent hover:bg-muted/30",
-                      )}
-                      onClick={() => setSelectedId(e.id)}
-                    >
-                      <KindIcon kind={e.kind} />
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                          <span className="capitalize">{e.kind}</span>
-                          {tone === "error" && (
-                            <>
-                              <span aria-hidden>·</span>
-                              <span className="text-destructive">error</span>
-                            </>
-                          )}
-                          <span aria-hidden>·</span>
-                          <span className="shrink-0 tabular-nums">
-                            {formatWhen(e.createdAt)}
+                    <div key={e.id} className="group relative">
+                      <button
+                        type="button"
+                        className={cn(
+                          "flex w-full items-start gap-2 rounded-md border px-2 py-1.5 pr-16 text-left transition-colors",
+                          active
+                            ? "border-border bg-muted/70"
+                            : "border-transparent hover:bg-muted/30",
+                        )}
+                        onClick={() => setSelectedId(e.id)}
+                      >
+                        <KindIcon kind={e.kind} />
+                        <span className="min-w-0 flex-1">
+                          <span
+                            className={cn(
+                              "block truncate text-[13px] font-medium leading-snug",
+                              tone === "error" && "text-destructive",
+                            )}
+                          >
+                            {e.title}
                           </span>
-                          {e.connName && (
-                            <>
-                              <span aria-hidden>·</span>
-                              <span className="truncate">{e.connName}</span>
-                            </>
-                          )}
+                          <span className="mt-0.5 flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground">
+                            {tone === "error" && (
+                              <>
+                                <span className="text-destructive">error</span>
+                                <span aria-hidden>·</span>
+                              </>
+                            )}
+                            {kindFilter === "all" && (
+                              <>
+                                <span className="capitalize">{e.kind}</span>
+                                <span aria-hidden>·</span>
+                              </>
+                            )}
+                            <span className="truncate tabular-nums">
+                              {entryMetaLine(e)}
+                            </span>
+                          </span>
                         </span>
-                        <span className="mt-0.5 block line-clamp-2 text-[13px] font-medium leading-snug">
-                          {e.title}
-                        </span>
-                      </span>
-                    </button>
+                      </button>
+                      <div className="absolute top-1 right-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                        {e.kind === "query" ? (
+                          <>
+                            <Button
+                              size="icon-xs"
+                              variant="ghost"
+                              title="Re-run"
+                              aria-label={`Re-run ${e.title}`}
+                              disabled={busy || !!rerunningId}
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                void rerun(e);
+                              }}
+                            >
+                              <Play className="size-3" />
+                            </Button>
+                            <Button
+                              size="icon-xs"
+                              variant="ghost"
+                              title="Load SQL"
+                              aria-label={`Load SQL for ${e.title}`}
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                void loadSql(e);
+                              }}
+                            >
+                              <FileCode2 className="size-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            size="icon-xs"
+                            variant="ghost"
+                            title="Use in assistant"
+                            aria-label={`Use ${e.title} in assistant`}
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              useInAssistant(e);
+                            }}
+                          >
+                            <MessageSquarePlus className="size-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   );
                 })
               )}
@@ -448,7 +580,7 @@ export function HistoryPanel({
                   <Copy className="size-3.5" />
                   Copy
                 </Button>
-                {selected.kind === "query" && (
+                {selected.kind === "query" ? (
                   <>
                     <Button
                       size="xs"
@@ -460,13 +592,22 @@ export function HistoryPanel({
                     <Button
                       size="xs"
                       variant="secondary"
-                      disabled={rerunning}
+                      disabled={!!rerunningId}
                       onClick={() => void rerun(selected)}
                     >
                       <Play className="size-3.5" />
-                      {rerunning ? "Running…" : "Re-run"}
+                      {rerunningId === selected.id ? "Running…" : "Re-run"}
                     </Button>
                   </>
+                ) : (
+                  <Button
+                    size="xs"
+                    variant="secondary"
+                    onClick={() => useInAssistant(selected)}
+                  >
+                    <MessageSquarePlus className="size-3.5" />
+                    Use in assistant
+                  </Button>
                 )}
                 <Button
                   size="xs"
