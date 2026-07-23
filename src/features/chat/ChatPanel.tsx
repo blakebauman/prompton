@@ -436,7 +436,11 @@ export function AssistantPanel({
             <span className="truncate text-[11px] text-muted-foreground">
               {active.name}
               {" · "}
-              {active.dialect === "postgres" ? "Postgres" : "SQLite"}
+              {active.dialect === "postgres"
+                ? "Postgres"
+                : active.dialect === "mysql"
+                  ? "MySQL"
+                  : "SQLite"}
             </span>
           )}
         </div>
@@ -489,7 +493,7 @@ export function AssistantPanel({
                     id: "database",
                     title: "Connect a database",
                     description:
-                      "Add Postgres or SQLite in Connections, or open the seeded demo.",
+                      "Add Postgres, MySQL, or SQLite in Connections, or open the seeded demo.",
                     ready: false,
                     icon: <DatabaseIcon className="size-3.5" />,
                     action: (

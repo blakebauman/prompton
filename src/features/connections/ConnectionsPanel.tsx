@@ -90,11 +90,30 @@ export function ConnectionsPanel() {
   });
 
   useEffect(() => {
-    setIsProduction(dialect === "postgres");
-    setForm((f) => ({
-      ...f,
-      name: dialect === "sqlite" ? "Local SQLite" : "PostgreSQL",
-    }));
+    setIsProduction(dialect === "postgres" || dialect === "mysql");
+    setForm((f) => {
+      if (dialect === "sqlite") {
+        return { ...f, name: "Local SQLite" };
+      }
+      if (dialect === "mysql") {
+        return {
+          ...f,
+          name: "MySQL",
+          port: "3306",
+          database: "mysql",
+          username: "root",
+          host: f.host || "127.0.0.1",
+        };
+      }
+      return {
+        ...f,
+        name: "PostgreSQL",
+        port: "5432",
+        database: "postgres",
+        username: "postgres",
+        host: f.host || "127.0.0.1",
+      };
+    });
   }, [dialect]);
 
   useEffect(() => {
@@ -196,20 +215,35 @@ export function ConnectionsPanel() {
             }),
             isProduction,
           }
-        : {
-            name: form.name || "PostgreSQL",
-            dialect: "postgres",
-            host: form.host,
-            port: Number(form.port) || 5432,
-            database: form.database,
-            username: form.username,
-            password: form.password,
-            color: connectionIdentityColor({
-              dialect: "postgres",
+        : dialect === "mysql"
+          ? {
+              name: form.name || "MySQL",
+              dialect: "mysql",
+              host: form.host,
+              port: Number(form.port) || 3306,
+              database: form.database,
+              username: form.username,
+              password: form.password,
+              color: connectionIdentityColor({
+                dialect: "mysql",
+                isProduction,
+              }),
               isProduction,
-            }),
-            isProduction,
-          };
+            }
+          : {
+              name: form.name || "PostgreSQL",
+              dialect: "postgres",
+              host: form.host,
+              port: Number(form.port) || 5432,
+              database: form.database,
+              username: form.username,
+              password: form.password,
+              color: connectionIdentityColor({
+                dialect: "postgres",
+                isProduction,
+              }),
+              isProduction,
+            };
 
     try {
       const info = await api.connectDb(request);
@@ -313,7 +347,7 @@ export function ConnectionsPanel() {
               dashed
               className="min-h-36 p-3"
               title="No connections"
-              description="Add Postgres or SQLite, or open a seeded demo to explore."
+              description="Add Postgres, MySQL, or SQLite, or open a seeded demo to explore."
               actions={
                 <>
                   <Button size="xs" onClick={() => setOpen(true)}>
@@ -578,6 +612,7 @@ export function ConnectionsPanel() {
                 <SelectContent>
                   <SelectItem value="sqlite">SQLite</SelectItem>
                   <SelectItem value="postgres">PostgreSQL</SelectItem>
+                  <SelectItem value="mysql">MySQL</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -671,8 +706,8 @@ export function ConnectionsPanel() {
                   Production database
                 </Label>
                 <p className="text-[11px] leading-snug text-muted-foreground text-pretty">
-                  {dialect === "postgres"
-                    ? "Postgres defaults to production: read-only until HITL or admin unlock."
+                  {dialect === "postgres" || dialect === "mysql"
+                    ? "Network databases default to production: read-only until HITL or admin unlock."
                     : "Read-only for the agent until HITL approval or an admin unlocks writes."}
                 </p>
               </div>

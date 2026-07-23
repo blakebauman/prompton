@@ -4,7 +4,7 @@
 product
 
 ## Users & Purpose
-Prompton is a native desktop database client for engineers who query Postgres and SQLite locally. The primary job on any screen is: connect → ask or write SQL → inspect results/schema safely. The Prompton assistant is the hub (the agent is the product); the artifact pane holds Results, Chart, SQL, Schema, Explain, and agent context. Shell chrome uses the tagline “Desktop database client”; the wordmark leads on the assistant. The mark is a database cylinder with a prompt caret (in-app SVG + Dock icons from `app-icon.svg`). Production databases stay read-only until human-in-the-loop approval (or an admin unlock).
+Prompton is a native desktop database client for engineers who query Postgres, MySQL, and SQLite. The primary job on any screen is: connect → ask or write SQL → inspect results/schema safely. The Prompton assistant is the hub (the agent is the product); the artifact pane holds Results, Chart, SQL, Schema, Explain, and agent context. Shell chrome uses the tagline “Desktop database client”; the wordmark leads on the assistant. The mark is a database cylinder with a prompt caret (in-app SVG + Dock icons from `app-icon.svg`). Production databases stay read-only until human-in-the-loop approval (or an admin unlock).
 
 ## Brand Personality
 Careful, precise, calm. Feels like a trustworthy power tool (TablePlus / Linear density), not a marketing dashboard.

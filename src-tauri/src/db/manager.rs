@@ -8,6 +8,7 @@ use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use crate::db::driver::{Driver, ExecResult};
+use crate::db::mysql::MysqlDriver;
 use crate::db::postgres::PostgresDriver;
 use crate::db::sqlite::SqliteDriver;
 use crate::db::types::{
@@ -92,15 +93,7 @@ impl ConnectionManager {
             .into_iter()
             .map(|c| {
                 let connected = live.contains_key(&c.id);
-                let summary = match c.dialect {
-                    Dialect::Postgres => format!(
-                        "{}:{}/{}",
-                        c.host.as_deref().unwrap_or("localhost"),
-                        c.port.unwrap_or(5432),
-                        c.database.as_deref().unwrap_or("")
-                    ),
-                    Dialect::Sqlite => c.file_path.clone().unwrap_or_default(),
-                };
+                let summary = connection_summary(&c);
                 ConnectionInfo {
                     id: c.id,
                     name: c.name,
@@ -127,7 +120,7 @@ impl ConnectionManager {
 
         let id = Uuid::new_v4();
         let is_production = req.is_production.unwrap_or(match req.dialect {
-            Dialect::Postgres => true,
+            Dialect::Postgres | Dialect::Mysql => true,
             Dialect::Sqlite => false,
         });
         let config = ConnectionConfig {
@@ -139,13 +132,7 @@ impl ConnectionManager {
             database: req.database,
             username: req.username,
             file_path: req.file_path,
-            color: req.color.unwrap_or_else(|| {
-                if req.dialect == Dialect::Sqlite {
-                    "oklch(0.55 0 0)".into()
-                } else {
-                    "oklch(0.72 0 0)".into()
-                }
-            }),
+            color: req.color.unwrap_or_else(|| default_dialect_color(req.dialect)),
             ssl_mode: req.ssl_mode,
             is_production,
             admin_writes_unlocked: false,
@@ -163,6 +150,14 @@ impl ConnectionManager {
                     .or_else(|| self.secrets.get_password(&id).ok().flatten())
                     .unwrap_or_default();
                 Arc::new(PostgresDriver::connect(&config, &password).await?)
+            }
+            Dialect::Mysql => {
+                let password = req
+                    .password
+                    .clone()
+                    .or_else(|| self.secrets.get_password(&id).ok().flatten())
+                    .unwrap_or_default();
+                Arc::new(MysqlDriver::connect(&config, &password).await?)
             }
             Dialect::Sqlite => Arc::new(SqliteDriver::connect(&config).await?),
         };
@@ -186,19 +181,11 @@ impl ConnectionManager {
 
         Ok(ConnectionInfo {
             id,
-            name: config.name,
+            name: config.name.clone(),
             dialect: config.dialect,
-            color: config.color,
+            color: config.color.clone(),
             connected: true,
-            summary: match config.dialect {
-                Dialect::Postgres => format!(
-                    "{}:{}/{}",
-                    config.host.as_deref().unwrap_or("localhost"),
-                    config.port.unwrap_or(5432),
-                    config.database.as_deref().unwrap_or("")
-                ),
-                Dialect::Sqlite => config.file_path.unwrap_or_default(),
-            },
+            summary: connection_summary(&config),
             is_production: config.is_production,
             admin_writes_unlocked: config.admin_writes_unlocked,
         })
@@ -220,6 +207,13 @@ impl ConnectionManager {
                     .get_password(&id)?
                     .unwrap_or_default();
                 Arc::new(PostgresDriver::connect(&config, &password).await?)
+            }
+            Dialect::Mysql => {
+                let password = self
+                    .secrets
+                    .get_password(&id)?
+                    .unwrap_or_default();
+                Arc::new(MysqlDriver::connect(&config, &password).await?)
             }
             Dialect::Sqlite => Arc::new(SqliteDriver::connect(&config).await?),
         };
@@ -961,5 +955,31 @@ impl ConnectionManager {
             .await?;
 
         Ok((info, page))
+    }
+}
+
+fn connection_summary(c: &ConnectionConfig) -> String {
+    match c.dialect {
+        Dialect::Postgres => format!(
+            "{}:{}/{}",
+            c.host.as_deref().unwrap_or("localhost"),
+            c.port.unwrap_or(5432),
+            c.database.as_deref().unwrap_or("")
+        ),
+        Dialect::Mysql => format!(
+            "{}:{}/{}",
+            c.host.as_deref().unwrap_or("localhost"),
+            c.port.unwrap_or(3306),
+            c.database.as_deref().unwrap_or("")
+        ),
+        Dialect::Sqlite => c.file_path.clone().unwrap_or_default(),
+    }
+}
+
+fn default_dialect_color(dialect: Dialect) -> String {
+    match dialect {
+        Dialect::Sqlite => "oklch(0.55 0 0)".into(),
+        Dialect::Mysql => "oklch(0.64 0 0)".into(),
+        Dialect::Postgres => "oklch(0.72 0 0)".into(),
     }
 }

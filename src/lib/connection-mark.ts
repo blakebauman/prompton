@@ -9,7 +9,14 @@ export function connectionIdentityColor(c: {
   isProduction?: boolean;
 }): string {
   if (c.isProduction) return "var(--prod)";
-  return c.dialect === "postgres" ? "oklch(0.72 0 0)" : "oklch(0.55 0 0)";
+  switch (c.dialect) {
+    case "postgres":
+      return "oklch(0.72 0 0)";
+    case "mysql":
+      return "oklch(0.64 0 0)";
+    case "sqlite":
+      return "oklch(0.55 0 0)";
+  }
 }
 
 /** @deprecated Use connectionIdentityColor — kept for call-site migration. */

@@ -1,4 +1,4 @@
-export type Dialect = "postgres" | "sqlite";
+export type Dialect = "postgres" | "mysql" | "sqlite";
 
 export type ProviderKind = "openaiCompatible" | "anthropic" | "ollama";
 
@@ -25,7 +25,7 @@ export interface ConnectRequest {
   filePath?: string;
   color?: string;
   sslMode?: string;
-  /** Postgres defaults to true; SQLite defaults to false when omitted. */
+  /** Postgres/MySQL default to true; SQLite defaults to false when omitted. */
   isProduction?: boolean;
 }
 

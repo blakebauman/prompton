@@ -5,6 +5,7 @@ use uuid::Uuid;
 #[serde(rename_all = "lowercase")]
 pub enum Dialect {
     Postgres,
+    Mysql,
     Sqlite,
 }
 
@@ -59,7 +60,7 @@ pub struct ConnectRequest {
     pub file_path: Option<String>,
     pub color: Option<String>,
     pub ssl_mode: Option<String>,
-    /// When omitted: Postgres defaults to production, SQLite to non-production.
+    /// When omitted: Postgres/MySQL default to production, SQLite to non-production.
     #[serde(default)]
     pub is_production: Option<bool>,
 }

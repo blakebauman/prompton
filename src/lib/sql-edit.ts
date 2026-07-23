@@ -25,10 +25,10 @@ export function parseSimpleSelectTarget(
 }
 
 export function quoteIdent(name: string, dialect: Dialect): string {
-  if (dialect === "postgres") {
-    return `"${name.replace(/"/g, '""')}"`;
+  if (dialect === "mysql") {
+    return `\`${name.replace(/`/g, "``")}\``;
   }
-  // SQLite: double-quote identifiers
+  // Postgres + SQLite: double-quote identifiers
   return `"${name.replace(/"/g, '""')}"`;
 }
 
@@ -36,7 +36,9 @@ export function sqlLiteral(value: unknown, dialect: Dialect): string {
   if (value == null) return "NULL";
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   if (typeof value === "boolean") {
-    if (dialect === "postgres") return value ? "TRUE" : "FALSE";
+    if (dialect === "postgres" || dialect === "mysql") {
+      return value ? "TRUE" : "FALSE";
+    }
     return value ? "1" : "0";
   }
   const s = typeof value === "string" ? value : JSON.stringify(value);
