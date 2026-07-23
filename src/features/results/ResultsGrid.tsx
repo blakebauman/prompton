@@ -56,12 +56,46 @@ import { useWorkspace } from "@/stores/workspace";
 
 const PAGE = 200;
 const EXPORT_PAGE = 500;
+const COL_MIN = 72;
+const COL_MAX = 480;
+const COL_DEFAULT = 160;
+const COL_SAMPLE_ROWS = 48;
+/** Mono text-xs ≈ 7.2px/ch + cell padding. */
+const COL_CH = 7.2;
+const COL_PAD = 28;
 
 type CellKey = string;
 type ExportScope = "all" | "loaded" | "selection";
 
 function cellKey(row: number, col: number): CellKey {
   return `${row}:${col}`;
+}
+
+function estimateTextWidth(text: string): number {
+  return Math.ceil(Math.min(text.length, 80) * COL_CH) + COL_PAD;
+}
+
+function clampColWidth(w: number): number {
+  return Math.min(COL_MAX, Math.max(COL_MIN, Math.round(w)));
+}
+
+/** Fit widths from header labels + a sample of loaded cells. */
+function fitColumnWidths(
+  columns: { name: string }[],
+  rows: unknown[][],
+  pkNames: Set<string>,
+): Record<string, number> {
+  const widths: Record<string, number> = {};
+  const sample = Math.min(rows.length, COL_SAMPLE_ROWS);
+  for (let i = 0; i < columns.length; i++) {
+    const name = columns[i].name;
+    let w = estimateTextWidth(name) + (pkNames.has(name) ? 22 : 0);
+    for (let r = 0; r < sample; r++) {
+      w = Math.max(w, estimateTextWidth(formatCell(rows[r]?.[i])));
+    }
+    widths[name] = clampColWidth(w);
+  }
+  return widths;
 }
 
 export function ResultsGrid() {
@@ -101,6 +135,17 @@ export function ResultsGrid() {
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(
     () => new Set(),
   );
+  /** Pixel widths by column name; auto-fit on new query, drag to override. */
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(
+    () => ({}),
+  );
+  const resizingRef = useRef<{
+    name: string;
+    startX: number;
+    startW: number;
+  } | null>(null);
+  const fittedQueryRef = useRef<string | null>(null);
+  const fittedWithRowsRef = useRef(false);
 
   const active = connections.find((c) => c.id === activeConnId);
   const rowCount = result?.totalRows ?? 0;
@@ -132,6 +177,7 @@ export function ResultsGrid() {
     setPendingWrite(null);
     setPendingEdit(null);
     setHiddenColumns(new Set());
+    setColumnWidths({});
   }, [result?.queryId]);
 
   useEffect(() => {
@@ -185,6 +231,7 @@ export function ResultsGrid() {
       tableMeta?.columns.filter((c) => c.isPrimaryKey).map((c) => c.name) ?? [],
     [tableMeta],
   );
+  const pkNameSet = useMemo(() => new Set(pkColumns), [pkColumns]);
 
   const canEdit = Boolean(
     activeConnId &&
@@ -193,6 +240,82 @@ export function ResultsGrid() {
       pkColumns.length > 0 &&
       pkColumns.every((pk) => columns.some((c) => c.name === pk)),
   );
+
+  // Auto-fit on new query; refine once when the first page of rows lands.
+  useEffect(() => {
+    if (!result?.queryId || columns.length === 0) return;
+    const qid = result.queryId;
+    const hasRows = result.rows.length > 0;
+    if (fittedQueryRef.current !== qid) {
+      fittedQueryRef.current = qid;
+      fittedWithRowsRef.current = hasRows;
+      setColumnWidths(fitColumnWidths(columns, result.rows, pkNameSet));
+      return;
+    }
+    if (hasRows && !fittedWithRowsRef.current) {
+      fittedWithRowsRef.current = true;
+      setColumnWidths(fitColumnWidths(columns, result.rows, pkNameSet));
+    }
+  }, [result?.queryId, result?.rows.length, columns, pkNameSet]);
+
+  const gridWidth = useMemo(
+    () =>
+      visibleColumns.reduce(
+        (sum, { col }) => sum + (columnWidths[col.name] ?? COL_DEFAULT),
+        0,
+      ),
+    [visibleColumns, columnWidths],
+  );
+
+  function colWidth(name: string): number {
+    return columnWidths[name] ?? COL_DEFAULT;
+  }
+
+  function fitVisibleColumns() {
+    if (!result) return;
+    setColumnWidths((prev) => {
+      const merged = { ...prev };
+      for (const { col, index } of visibleColumns) {
+        let w = estimateTextWidth(col.name) + (pkNameSet.has(col.name) ? 22 : 0);
+        const sample = Math.min(result.rows.length, COL_SAMPLE_ROWS);
+        for (let r = 0; r < sample; r++) {
+          w = Math.max(
+            w,
+            estimateTextWidth(formatCell(result.rows[r]?.[index])),
+          );
+        }
+        merged[col.name] = clampColWidth(w);
+      }
+      return merged;
+    });
+    toast({ title: "Columns fitted", tone: "success" });
+  }
+
+  function beginResize(name: string, clientX: number) {
+    resizingRef.current = {
+      name,
+      startX: clientX,
+      startW: colWidth(name),
+    };
+    const onMove = (ev: PointerEvent) => {
+      const activeResize = resizingRef.current;
+      if (!activeResize) return;
+      const delta = ev.clientX - activeResize.startX;
+      const w = clampColWidth(activeResize.startW + delta);
+      setColumnWidths((prev) => ({ ...prev, [activeResize.name]: w }));
+    };
+    const onUp = () => {
+      resizingRef.current = null;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
 
   async function runSample() {
     if (!activeConnId) {
@@ -673,6 +796,9 @@ export function ResultsGrid() {
                   </DropdownMenuCheckboxItem>
                 ))}
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={fitVisibleColumns}>
+                  Fit columns
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={hiddenColumns.size === 0}
                   onClick={showAllColumns}
@@ -770,17 +896,21 @@ export function ResultsGrid() {
         <div
           style={{
             height: virtualizer.getTotalSize() + 32,
-            width: "max-content",
+            width: Math.max(gridWidth, parentRef.current?.clientWidth ?? 0),
             minWidth: "100%",
             position: "relative",
           }}
         >
-          <div className="sticky top-0 z-10 flex border-b border-border/60 bg-muted/50 backdrop-blur">
+          <div
+            className="sticky top-0 z-10 flex border-b border-border/60 bg-muted/50 backdrop-blur"
+            style={{ width: gridWidth }}
+          >
             {visibleColumns.map(({ col: c }) => (
               <div
                 key={c.name}
-                className="w-40 shrink-0 truncate border-r border-border/50 px-2 py-1.5 font-medium"
-                title={`${c.name} (${c.dataType})`}
+                className="relative shrink-0 truncate border-r border-border/50 px-2 py-1.5 font-medium"
+                style={{ width: colWidth(c.name) }}
+                title={`${c.name} (${c.dataType}) · drag edge to resize`}
               >
                 {c.name}
                 {pkColumns.includes(c.name) ? (
@@ -788,6 +918,42 @@ export function ResultsGrid() {
                     PK
                   </span>
                 ) : null}
+                <div
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label={`Resize ${c.name}`}
+                  className="absolute top-0 right-0 z-20 h-full w-1.5 translate-x-1/2 cursor-col-resize hover:bg-foreground/15"
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    beginResize(c.name, e.clientX);
+                  }}
+                  onDoubleClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Fit this column from the loaded sample.
+                    if (!result) return;
+                    const index = columns.findIndex((col) => col.name === c.name);
+                    if (index < 0) return;
+                    let w =
+                      estimateTextWidth(c.name) +
+                      (pkNameSet.has(c.name) ? 22 : 0);
+                    const sample = Math.min(
+                      result.rows.length,
+                      COL_SAMPLE_ROWS,
+                    );
+                    for (let r = 0; r < sample; r++) {
+                      w = Math.max(
+                        w,
+                        estimateTextWidth(formatCell(result.rows[r]?.[index])),
+                      );
+                    }
+                    setColumnWidths((prev) => ({
+                      ...prev,
+                      [c.name]: clampColWidth(w),
+                    }));
+                  }}
+                />
               </div>
             ))}
           </div>
@@ -800,6 +966,7 @@ export function ResultsGrid() {
                 style={{
                   transform: `translateY(${vRow.start + 32}px)`,
                   height: vRow.size,
+                  width: gridWidth,
                 }}
               >
                 {visibleColumns.map(({ col: c, index: i }) => {
@@ -811,7 +978,7 @@ export function ResultsGrid() {
                     <div
                       key={c.name}
                       className={cn(
-                        "w-40 shrink-0 border-r border-border/40 px-2 py-1.5",
+                        "shrink-0 border-r border-border/40 px-2 py-1.5",
                         isSelected &&
                           "bg-foreground/[0.07] outline outline-1 -outline-offset-1 outline-foreground/20",
                         !isSelected && "hover:bg-muted/50",
@@ -822,6 +989,7 @@ export function ResultsGrid() {
                           !pkColumns.includes(c.name) &&
                           "cursor-text",
                       )}
+                      style={{ width: colWidth(c.name) }}
                       title={row ? String(row[i] ?? "") : ""}
                       onClick={(e) => selectCell(vRow.index, i, e)}
                       onDoubleClick={() => beginEdit(vRow.index, i)}
