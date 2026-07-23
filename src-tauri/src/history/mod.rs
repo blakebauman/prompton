@@ -46,6 +46,16 @@ pub struct RecordHistoryRequest {
     pub meta: Option<serde_json::Value>,
 }
 
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryListFilter {
+    pub limit: Option<usize>,
+    pub kind: Option<HistoryKind>,
+    pub conn_id: Option<Uuid>,
+    pub status: Option<String>,
+    pub query: Option<String>,
+}
+
 pub struct HistoryStore {
     path: PathBuf,
 }
@@ -76,9 +86,44 @@ impl HistoryStore {
     }
 
     pub fn list(&self, limit: Option<usize>) -> AppResult<Vec<HistoryEntry>> {
+        self.list_filtered(HistoryListFilter {
+            limit,
+            ..Default::default()
+        })
+    }
+
+    pub fn list_filtered(&self, filter: HistoryListFilter) -> AppResult<Vec<HistoryEntry>> {
         let mut entries = self.load()?;
         entries.sort_by(|a, b| b.created_at.cmp(&a.created_at));
-        if let Some(limit) = limit {
+
+        if let Some(kind) = filter.kind {
+            entries.retain(|e| e.kind == kind);
+        }
+        if let Some(conn_id) = filter.conn_id {
+            entries.retain(|e| e.conn_id == Some(conn_id));
+        }
+        if let Some(status) = filter.status.as_deref().map(str::trim).filter(|s| !s.is_empty())
+        {
+            let status_l = status.to_ascii_lowercase();
+            entries.retain(|e| e.status.eq_ignore_ascii_case(&status_l));
+        }
+        if let Some(q) = filter.query.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+            let q = q.to_ascii_lowercase();
+            entries.retain(|e| {
+                e.title.to_ascii_lowercase().contains(&q)
+                    || e.body.to_ascii_lowercase().contains(&q)
+                    || e.conn_name
+                        .as_deref()
+                        .map(|n| n.to_ascii_lowercase().contains(&q))
+                        .unwrap_or(false)
+                    || e.detail
+                        .as_deref()
+                        .map(|d| d.to_ascii_lowercase().contains(&q))
+                        .unwrap_or(false)
+            });
+        }
+
+        if let Some(limit) = filter.limit {
             entries.truncate(limit);
         }
         Ok(entries)
@@ -121,12 +166,33 @@ impl HistoryStore {
         duration_ms: u64,
         status: &str,
     ) -> AppResult<HistoryEntry> {
+        self.record_query_detailed(
+            sql,
+            conn_id,
+            conn_name,
+            total_rows,
+            duration_ms,
+            status,
+            None,
+        )
+    }
+
+    pub fn record_query_detailed(
+        &self,
+        sql: &str,
+        conn_id: Option<Uuid>,
+        conn_name: Option<String>,
+        total_rows: usize,
+        duration_ms: u64,
+        status: &str,
+        detail: Option<String>,
+    ) -> AppResult<HistoryEntry> {
         let title = first_line(sql);
         self.record(RecordHistoryRequest {
             kind: HistoryKind::Query,
             title,
             body: sql.to_string(),
-            detail: None,
+            detail,
             conn_id,
             conn_name,
             status: Some(status.into()),
@@ -194,6 +260,49 @@ mod tests {
         assert!(list[0].title.contains("SELECT"));
         store.delete(entry.id).unwrap();
         assert!(store.list(None).unwrap().is_empty());
+
+        store
+            .record_query("SELECT 1", None, None, 1, 1, "ok")
+            .unwrap();
+        store
+            .record_query_detailed(
+                "SELECT bad",
+                None,
+                None,
+                0,
+                0,
+                "error",
+                Some("syntax error".into()),
+            )
+            .unwrap();
+        store
+            .record(RecordHistoryRequest {
+                kind: HistoryKind::Agent,
+                title: "hello".into(),
+                body: "hello".into(),
+                detail: None,
+                conn_id: None,
+                conn_name: None,
+                status: Some("ok".into()),
+                meta: None,
+            })
+            .unwrap();
+        let errors = store
+            .list_filtered(HistoryListFilter {
+                status: Some("error".into()),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].status, "error");
+        let agents = store
+            .list_filtered(HistoryListFilter {
+                kind: Some(HistoryKind::Agent),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(agents.len(), 1);
+
         let _ = std::fs::remove_dir_all(&dir);
     }
 

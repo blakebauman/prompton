@@ -273,6 +273,23 @@ export function ChatPanel({
               content: `Error: ${p.error}`,
             });
             setStatus(p.error);
+            const s = useWorkspace.getState();
+            const conn = s.connections.find((c) => c.id === s.activeConnId);
+            const lastUser = [...s.messages]
+              .reverse()
+              .find((m) => m.role === "user");
+            void api
+              .recordHistory({
+                kind: "agent",
+                title: lastUser?.content ?? "Agent error",
+                body: lastUser?.content ?? p.error,
+                detail: p.error,
+                connId: conn?.id ?? null,
+                connName: conn?.name ?? null,
+                status: "error",
+                meta: { sessionId: p.sessionId },
+              })
+              .catch(() => {});
           },
         ),
       );

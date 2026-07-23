@@ -159,3 +159,11 @@ export interface RecordHistoryRequest {
   status?: string | null;
   meta?: Record<string, unknown> | null;
 }
+
+export interface HistoryListFilter {
+  limit?: number;
+  kind?: HistoryKind | null;
+  connId?: string | null;
+  status?: string | null;
+  query?: string | null;
+}

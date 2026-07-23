@@ -7,6 +7,7 @@ import type {
   ConnectRequest,
   ConnectionInfo,
   HistoryEntry,
+  HistoryListFilter,
   PendingConfirmation,
   PromptEntry,
   QueryPage,
@@ -156,8 +157,18 @@ export const api = {
   savePrompt: (title: string, body: string, id?: string) =>
     invoke<PromptEntry>("save_prompt", { id, title, body }),
   deletePrompt: (id: string) => invoke<void>("delete_prompt", { id }),
-  listHistory: (limit?: number) =>
-    invoke<HistoryEntry[]>("list_history", { limit }),
+  listHistory: (filter?: HistoryListFilter | number) => {
+    if (typeof filter === "number") {
+      return invoke<HistoryEntry[]>("list_history", {
+        filter: { limit: filter },
+        limit: filter,
+      });
+    }
+    return invoke<HistoryEntry[]>("list_history", {
+      filter: filter ?? { limit: 200 },
+      limit: filter?.limit ?? 200,
+    });
+  },
   getHistory: (id: string) =>
     invoke<HistoryEntry | null>("get_history", { id }),
   recordHistory: (request: RecordHistoryRequest) =>

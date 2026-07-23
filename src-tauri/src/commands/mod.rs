@@ -10,7 +10,7 @@ use crate::db::types::{
     TableDescription,
 };
 use crate::error::AppResult;
-use crate::history::{HistoryEntry, RecordHistoryRequest};
+use crate::history::{HistoryEntry, HistoryListFilter, RecordHistoryRequest};
 use crate::prompts::PromptEntry;
 use crate::skills::{SkillContent, SkillMeta};
 use crate::state::AppState;
@@ -72,21 +72,41 @@ pub async fn run_query(
 ) -> AppResult<QueryPage> {
     // allow_mutating is ignored: all mutations must go through HITL confirm_write.
     let _ = allow_mutating;
-    let page = state.db.run_query(request.clone(), false).await?;
     let conn_name = state
         .db
         .get_config(request.conn_id)
         .map(|c| c.name.clone());
-    let _ = state.history.record_query(
-        &page.sql,
-        Some(request.conn_id),
-        conn_name,
-        page.total_rows,
-        page.duration_ms,
-        "ok",
-    );
-    let _ = app.emit("history:updated", ());
-    Ok(page)
+    match state.db.run_query(request.clone(), false).await {
+        Ok(page) => {
+            let _ = state.history.record_query(
+                &page.sql,
+                Some(request.conn_id),
+                conn_name,
+                page.total_rows,
+                page.duration_ms,
+                "ok",
+            );
+            let _ = app.emit("history:updated", ());
+            Ok(page)
+        }
+        Err(e) => {
+            let msg = e.to_string();
+            let cancelled = msg.to_ascii_lowercase().contains("cancel");
+            if !cancelled {
+                let _ = state.history.record_query_detailed(
+                    &request.sql,
+                    Some(request.conn_id),
+                    conn_name,
+                    0,
+                    0,
+                    "error",
+                    Some(msg),
+                );
+                let _ = app.emit("history:updated", ());
+            }
+            Err(e)
+        }
+    }
 }
 
 #[tauri::command]
@@ -275,9 +295,14 @@ pub fn delete_prompt(state: State<'_, AppState>, id: Uuid) -> AppResult<()> {
 #[tauri::command]
 pub fn list_history(
     state: State<'_, AppState>,
+    filter: Option<HistoryListFilter>,
     limit: Option<usize>,
 ) -> AppResult<Vec<HistoryEntry>> {
-    state.history.list(limit)
+    let mut filter = filter.unwrap_or_default();
+    if filter.limit.is_none() {
+        filter.limit = limit.or(Some(200));
+    }
+    state.history.list_filtered(filter)
 }
 
 #[tauri::command]
