@@ -304,16 +304,16 @@ function AppShell() {
 
             {activity === "settings" && (
               <div className="relative h-full overflow-hidden">
-                <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-16 bg-gradient-to-b from-background to-transparent" />
-                <div className="absolute inset-x-0 top-0 z-20 px-6 pt-5">
-                  <div className="mx-auto max-w-4xl">
-                    <h1 className="text-2xl font-bold tracking-tight">
+                <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-gradient-to-b from-background to-transparent" />
+                <div className="absolute inset-x-0 top-0 z-20 flex h-9 items-center border-b border-border/60 px-4">
+                  <div className="mx-auto w-full max-w-4xl">
+                    <h1 className="text-sm font-semibold tracking-tight">
                       Settings
                     </h1>
                   </div>
                 </div>
                 <div className="h-full overflow-y-auto">
-                  <div className="mx-auto max-w-4xl px-6 pt-16 pb-10">
+                  <div className="mx-auto max-w-4xl px-4 pt-12 pb-8">
                     <SettingsPanel />
                   </div>
                 </div>

@@ -22,8 +22,8 @@ export function ShortcutsSettings() {
   const active = SHORTCUT_DEFS.find((d) => d.id === editing);
 
   return (
-    <div className="flex items-start gap-6">
-      <div className="min-w-0 flex-1 space-y-3">
+    <div className="flex items-start gap-4">
+      <div className="min-w-0 flex-1 space-y-2.5">
         <SettingSection
           title="Keyboard shortcuts"
           description="App-local chords. Click Change, then hold the new combination."
@@ -48,7 +48,7 @@ export function ShortcutsSettings() {
               }
             />
           ))}
-          <div className="py-3">
+          <div className="py-2">
             <Button
               type="button"
               size="xs"

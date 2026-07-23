@@ -107,7 +107,7 @@ export function SettingsPanel() {
   }, [kind, baseUrl]);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       <UnderlineTabs className="border-b border-border/50">
         {TABS.map((t) => (
           <UnderlineTab
@@ -401,7 +401,7 @@ export function SettingsPanel() {
       {tab === "shortcuts" && <ShortcutsSettings />}
 
       {tab === "diagnostics" && (
-        <div className="flex items-start gap-6">
+        <div className="flex items-start gap-4">
           <div className="min-w-0 flex-1">
             <LogConsole />
           </div>

@@ -25,20 +25,20 @@ export function SettingsHelpAside({
   return (
     <aside
       className={cn(
-        "sticky top-0 hidden w-[220px] shrink-0 space-y-4 lg:block",
+        "sticky top-0 hidden w-[200px] shrink-0 space-y-3 lg:block",
         className,
       )}
     >
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <h3 className="text-[13px] font-semibold tracking-tight">{title}</h3>
         {body && (
-          <p className="text-[11px] leading-relaxed text-muted-foreground text-pretty">
+          <p className="text-[11px] leading-snug text-muted-foreground text-pretty">
             {body}
           </p>
         )}
       </div>
       {tips && tips.length > 0 && (
-        <ul className="space-y-2.5">
+        <ul className="space-y-2">
           {tips.map((tip) => (
             <li key={tip.title} className="space-y-0.5">
               <div className="flex items-center gap-1.5">
@@ -51,7 +51,7 @@ export function SettingsHelpAside({
                   {tip.title}
                 </p>
               </div>
-              <p className="text-[11px] leading-relaxed text-muted-foreground text-pretty">
+              <p className="text-[11px] leading-snug text-muted-foreground text-pretty">
                 {tip.body}
               </p>
             </li>
