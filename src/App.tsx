@@ -13,6 +13,7 @@ import { ArtifactPane } from "@/components/artifact/artifact-pane";
 import { ConnectionStatus } from "@/components/connection-status";
 import { ProdBadge } from "@/components/prod-badge";
 import { StatusPill, statusTone } from "@/components/status-pill";
+import { PRODUCT_TAGLINE } from "@/components/brand-mark";
 import {
   DragRegion,
   TitleBarDragRegion,
@@ -173,16 +174,8 @@ function AppShell() {
             className="flex h-10 shrink-0 items-center justify-between gap-3 border-b border-border/60 px-3 select-none"
           >
             <div className="flex min-w-0 items-center gap-2.5">
-              <span className="flex shrink-0 items-center gap-2">
-                <span
-                  className="flex size-5 items-center justify-center rounded-md border border-border/60 bg-muted/50 text-[10px] font-bold tracking-tight"
-                  aria-hidden
-                >
-                  P
-                </span>
-                <span className="text-sm font-semibold tracking-tight">
-                  Prompton
-                </span>
+              <span className="truncate text-[12px] font-medium tracking-tight text-muted-foreground">
+                {PRODUCT_TAGLINE}
               </span>
               {activity === "workspace" && active && (
                 <>
@@ -211,6 +204,16 @@ function AppShell() {
                         {reconnecting ? "Connecting…" : "Reconnect"}
                       </Button>
                     )}
+                  </span>
+                </>
+              )}
+              {activity !== "workspace" && (
+                <>
+                  <span className="text-muted-foreground/40" aria-hidden>
+                    /
+                  </span>
+                  <span className="truncate text-xs font-medium text-foreground capitalize">
+                    {activity}
                   </span>
                 </>
               )}

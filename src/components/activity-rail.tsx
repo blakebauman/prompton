@@ -6,6 +6,7 @@ import {
   Settings,
 } from "lucide-react";
 
+import { BrandMark } from "@/components/brand-mark";
 import { DragRegion } from "@/components/titlebar-drag-region";
 import { cn } from "@/lib/utils";
 
@@ -46,10 +47,10 @@ export function ActivityRail({
       aria-label="Primary"
     >
       <DragRegion
-        className="mb-4 flex size-8 items-center justify-center rounded-md border border-border/60 bg-muted/40 text-[11px] font-bold tracking-tight text-foreground select-none"
+        className="mb-4 flex select-none items-center justify-center"
         aria-hidden
       >
-        P
+        <BrandMark wordmark={false} size="sm" />
       </DragRegion>
 
       <div className="flex flex-col gap-2.5">

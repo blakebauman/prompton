@@ -44,6 +44,7 @@ import {
 import { ActionNotice } from "@/components/action-notice";
 import { ActivityPulse } from "@/components/activity-pulse";
 import { useArtifact } from "@/components/artifact/artifact-context";
+import { BrandMark } from "@/components/brand-mark";
 import { SetupChecklist } from "@/components/setup-checklist";
 import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { Button } from "@/components/ui/button";
@@ -426,9 +427,12 @@ export function AssistantPanel({
     <div className="relative flex h-full flex-col overflow-hidden">
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-gradient-to-b from-background to-transparent" />
       <div className="relative z-20 flex h-10 shrink-0 items-center justify-between gap-2 px-4">
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2.5">
           {agentBusy && <ActivityPulse mode="busy" />}
-          <h2 className="text-base font-bold tracking-tight">Assistant</h2>
+          <h2 className="min-w-0">
+            <BrandMark size="md" />
+            <span className="sr-only">Prompton assistant</span>
+          </h2>
           {active && (
             <span className="truncate text-[11px] text-muted-foreground">
               {active.name}
@@ -523,8 +527,8 @@ export function AssistantPanel({
             </div>
           ) : showEmpty ? (
             <ConversationEmptyState
-              icon={<DatabaseIcon className="size-7 opacity-40" />}
-              title="Ask about this database"
+              icon={<BrandMark wordmark={false} size="md" className="opacity-70" />}
+              title="Ask Prompton"
               description="Schema, samples, EXPLAIN, and safe SELECTs — with writes gated for approval."
             />
           ) : (
