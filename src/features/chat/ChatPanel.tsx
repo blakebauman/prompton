@@ -86,10 +86,23 @@ export function ChatPanel({
     setActiveConnId,
     setSchemas,
     clearChat,
+    composerDraft,
+    setComposerDraft,
   } = useWorkspace();
   const { open: openArtifact } = useArtifact();
   const [input, setInput] = useState("");
   const active = connections.find((c) => c.id === activeConnId);
+
+  useEffect(() => {
+    if (composerDraft == null) return;
+    setInput(composerDraft);
+    setComposerDraft(null);
+    window.requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLTextAreaElement>("[data-chat-composer]")
+        ?.focus();
+    });
+  }, [composerDraft, setComposerDraft]);
 
   async function connectDemo() {
     try {

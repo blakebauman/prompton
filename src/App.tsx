@@ -215,7 +215,19 @@ function AppShell() {
             )}
 
             {activity === "library" && (
-              <LibraryPanel onOpenSettings={() => setActivity("settings")} />
+              <LibraryPanel
+                onOpenSettings={() => setActivity("settings")}
+                onOpenWorkspace={() => {
+                  setActivity("workspace");
+                  window.requestAnimationFrame(() => {
+                    document
+                      .querySelector<HTMLTextAreaElement>(
+                        "[data-chat-composer]",
+                      )
+                      ?.focus();
+                  });
+                }}
+              />
             )}
 
             {activity === "settings" && (

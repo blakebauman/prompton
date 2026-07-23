@@ -23,6 +23,8 @@ interface WorkspaceState {
   contextReport: BudgetReport | null;
   explainPlan: string | null;
   status: string;
+  /** One-shot draft to prefill the chat composer (e.g. Library → Chat). */
+  composerDraft: string | null;
 
   setConnections: (c: ConnectionInfo[]) => void;
   setActiveConnId: (id: string | null) => void;
@@ -44,6 +46,7 @@ interface WorkspaceState {
   setContextReport: (r: BudgetReport | null) => void;
   setExplainPlan: (plan: string | null) => void;
   setStatus: (s: string) => void;
+  setComposerDraft: (draft: string | null) => void;
   /** Clear the chat thread without wiping SQL results / explain. */
   clearChat: () => void;
   resetChatForConnection: () => void;
@@ -70,6 +73,7 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
   contextReport: null,
   explainPlan: null,
   status: "Ready",
+  composerDraft: null,
 
   setConnections: (connections) => set({ connections }),
   setActiveConnId: (activeConnId) => set({ activeConnId }),
@@ -110,12 +114,14 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
   setContextReport: (contextReport) => set({ contextReport }),
   setExplainPlan: (explainPlan) => set({ explainPlan }),
   setStatus: (status) => set({ status }),
+  setComposerDraft: (composerDraft) => set({ composerDraft }),
   clearChat: () =>
     set({
       sessionId: null,
       agentBusy: false,
       pendingConfirm: null,
       contextReport: null,
+      composerDraft: null,
       messages: [
         {
           id: "welcome",
@@ -133,6 +139,7 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
       explainPlan: null,
       pendingConfirm: null,
       contextReport: null,
+      composerDraft: null,
       messages: [
         {
           id: "welcome",

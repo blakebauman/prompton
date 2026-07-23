@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { BookMarked, FileText, Plus, Sparkles } from "lucide-react";
+import {
+  BookMarked,
+  FileText,
+  MessageSquare,
+  Plus,
+  Sparkles,
+} from "lucide-react";
 
 import {
   DetailPane,
@@ -41,10 +47,12 @@ type LibraryTab = "skills" | "prompts";
 /** Skills & prompts browser — list+detail with create + edit. */
 export function LibraryPanel({
   onOpenSettings,
+  onOpenWorkspace,
 }: {
   onOpenSettings?: () => void;
+  onOpenWorkspace?: () => void;
 }) {
-  const { setStatus } = useWorkspace();
+  const { setStatus, setComposerDraft } = useWorkspace();
   const [tab, setTab] = useState<LibraryTab>("skills");
   const [skills, setSkills] = useState<SkillMeta[]>([]);
   const [prompts, setPrompts] = useState<PromptEntry[]>([]);
@@ -247,6 +255,30 @@ export function LibraryPanel({
     }
   }
 
+  function useInChat() {
+    const text =
+      tab === "skills"
+        ? skillBody.trim() || skillDesc.trim()
+        : promptBody.trim();
+    if (!text) {
+      toast({ title: "Nothing to send", description: "Add a body first." });
+      return;
+    }
+    const draft =
+      tab === "skills" && selectedSkill
+        ? `Use skill “${selectedSkill}”:\n\n${text}`
+        : text;
+    setComposerDraft(draft);
+    onOpenWorkspace?.();
+    setStatus("Loaded into chat");
+    toast({
+      title: "Loaded into chat",
+      description:
+        tab === "skills" ? selectedSkill ?? "Skill" : promptTitle || "Prompt",
+      tone: "success",
+    });
+  }
+
   return (
     <div className="flex h-full overflow-hidden">
       <div className="w-[320px] shrink-0">
@@ -408,6 +440,19 @@ export function LibraryPanel({
                 </DetailPaneTitle>
               </div>
               <DetailPaneActions>
+                <Button
+                  size="xs"
+                  variant="outline"
+                  disabled={
+                    tab === "skills"
+                      ? !skillBody.trim() && !skillDesc.trim()
+                      : !promptBody.trim()
+                  }
+                  onClick={useInChat}
+                >
+                  <MessageSquare className="size-3.5" />
+                  Use in chat
+                </Button>
                 <Button
                   size="xs"
                   disabled={!dirty || saving}
