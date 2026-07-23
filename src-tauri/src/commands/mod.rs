@@ -90,7 +90,7 @@ pub async fn run_query(
             Ok(page)
         }
         Err(e) => {
-            let msg = e.to_string();
+            let msg = e.public_message();
             let cancelled = msg.to_ascii_lowercase().contains("cancel");
             if !cancelled {
                 let _ = state.history.record_query_detailed(

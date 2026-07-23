@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use crate::db::types::{ConnectRequest, Dialect, RunQueryRequest};
 use crate::db::ConnectionManager;
+use crate::error::AppError;
 
 #[tokio::test]
 async fn sqlite_connect_and_query() {
@@ -397,9 +398,62 @@ async fn cancel_inflight_query_by_client_id() {
     mgr.cancel_query(query_id).unwrap();
     let err = handle.await.expect("join").expect_err("should cancel");
     assert!(
-        err.to_string().to_ascii_lowercase().contains("cancel"),
-        "unexpected error: {err}"
+        err.public_message()
+            .to_ascii_lowercase()
+            .contains("cancel"),
+        "unexpected error: {}",
+        err.public_message()
     );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[tokio::test]
+async fn disconnect_discards_pending_writes() {
+    let dir = std::env::temp_dir().join(format!("prompton-disc-{}", uuid::Uuid::new_v4()));
+    let _ = std::fs::create_dir_all(&dir);
+    let db_path = dir.join("t.db");
+    let mgr = ConnectionManager::new(PathBuf::from(&dir));
+
+    let info = mgr
+        .connect(ConnectRequest {
+            name: "t".into(),
+            dialect: Dialect::Sqlite,
+            host: None,
+            port: None,
+            database: None,
+            username: None,
+            password: None,
+            file_path: Some(db_path.display().to_string()),
+            color: Some("#000".into()),
+            ssl_mode: None,
+            is_production: Some(true),
+        })
+        .await
+        .expect("connect");
+
+    mgr.run_query_trusted(RunQueryRequest {
+        conn_id: info.id,
+        sql: "CREATE TABLE t(id INTEGER)".into(),
+        page_size: 10,
+        query_id: None,
+    })
+    .await
+    .unwrap();
+
+    let pending = mgr
+        .request_write_approval(info.id, "INSERT INTO t VALUES (1)".into(), None)
+        .expect("stage");
+    assert_eq!(mgr.pending_write_count(), 1);
+
+    mgr.disconnect(info.id).unwrap();
+    assert_eq!(mgr.pending_write_count(), 0);
+
+    let err = mgr
+        .confirm_write(pending.confirmation_id, true, None)
+        .await
+        .expect_err("pending must be gone");
+    assert!(matches!(err, AppError::Message(_)));
 
     let _ = std::fs::remove_dir_all(&dir);
 }

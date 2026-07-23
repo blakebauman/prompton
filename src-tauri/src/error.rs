@@ -21,7 +21,8 @@ impl Serialize for AppError {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&self.to_string())
+        // Never ship raw driver/URL text to the webview.
+        serializer.serialize_str(&self.public_message())
     }
 }
 
@@ -31,6 +32,60 @@ impl AppError {
     pub fn msg(msg: impl Into<String>) -> Self {
         Self::Message(msg.into())
     }
+
+    /// Stable, credential-safe message for UI / history / tool results.
+    pub fn public_message(&self) -> String {
+        match self {
+            Self::Message(m) => m.clone(),
+            Self::Sqlx(e) => public_sqlx_message(e),
+            Self::Io(_) => "I/O error".into(),
+            Self::Serde(_) => "Invalid data".into(),
+            Self::Reqwest(_) => "Network request failed".into(),
+            Self::Anyhow(_) => "Unexpected error".into(),
+        }
+    }
+}
+
+fn public_sqlx_message(e: &sqlx::Error) -> String {
+    match e {
+        sqlx::Error::Database(db) => {
+            let msg = db.message();
+            if looks_like_secret_leak(msg) {
+                "Database error".into()
+            } else {
+                format!("Database error: {msg}")
+            }
+        }
+        sqlx::Error::PoolClosed => "Connection pool closed".into(),
+        sqlx::Error::PoolTimedOut => "Connection pool timed out".into(),
+        sqlx::Error::Io(_) | sqlx::Error::Tls(_) => "Connection failed".into(),
+        sqlx::Error::Protocol(_) => "Database protocol error".into(),
+        sqlx::Error::Configuration(_) => "Invalid connection configuration".into(),
+        sqlx::Error::RowNotFound => "Row not found".into(),
+        sqlx::Error::ColumnNotFound(_) | sqlx::Error::ColumnDecode { .. } => {
+            "Result decode error".into()
+        }
+        sqlx::Error::TypeNotFound { .. } => "Unknown database type".into(),
+        other => {
+            let raw = other.to_string();
+            if looks_like_secret_leak(&raw) {
+                "Database error".into()
+            } else if raw.len() > 240 {
+                "Database error".into()
+            } else {
+                format!("Database error: {raw}")
+            }
+        }
+    }
+}
+
+fn looks_like_secret_leak(msg: &str) -> bool {
+    let s = msg.to_ascii_lowercase();
+    s.contains("password=")
+        || s.contains("pwd=")
+        || (s.contains("://") && s.contains('@'))
+        || s.contains("postgres://")
+        || s.contains("mysql://")
 }
 
 /// True when the error indicates the live DB session/pool is unusable.
@@ -90,5 +145,15 @@ mod connection_lost_tests {
         assert!(looks_like_transport_failure("broken pipe"));
         assert!(looks_like_transport_failure("server closed the connection unexpectedly"));
         assert!(!looks_like_transport_failure("unique constraint failed"));
+    }
+
+    #[test]
+    fn public_message_scrubs_urlish_text() {
+        let err = AppError::msg("ok");
+        assert_eq!(err.public_message(), "ok");
+        assert!(looks_like_secret_leak(
+            "error connecting to postgres://user:secret@localhost/db"
+        ));
+        assert!(!looks_like_secret_leak("password authentication failed for user \"x\""));
     }
 }

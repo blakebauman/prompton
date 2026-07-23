@@ -5,7 +5,9 @@ use sqlx::{Column, MySql, Pool, Row, TypeInfo};
 use uuid::Uuid;
 
 use crate::db::driver::{Driver, ExecResult};
-use crate::db::types::{ColumnInfo, ConnectionConfig, SchemaNode, TableDescription};
+use crate::db::types::{
+    validate_db_host, ColumnInfo, ConnectionConfig, SchemaNode, TableDescription,
+};
 use crate::error::{AppError, AppResult};
 
 pub struct MysqlDriver {
@@ -16,7 +18,7 @@ pub struct MysqlDriver {
 
 impl MysqlDriver {
     pub async fn connect(config: &ConnectionConfig, password: &str) -> AppResult<Self> {
-        let host = config.host.as_deref().unwrap_or("localhost");
+        let host = validate_db_host(config.host.as_deref().unwrap_or("localhost"))?;
         let port = config.port.unwrap_or(3306);
         let database = config.database.as_deref().unwrap_or("mysql");
         let username = config.username.as_deref().unwrap_or("root");

@@ -78,17 +78,26 @@ impl SkillStore {
     }
 
     pub fn get(&self, name: &str) -> AppResult<SkillContent> {
-        let skill_md = self.dir.join(name).join("SKILL.md");
-        if !skill_md.exists() {
-            return Err(AppError::msg(format!("Skill not found: {name}")));
+        let safe = sanitize_name(name);
+        if safe.is_empty() {
+            return Err(AppError::msg("Invalid skill name"));
         }
-        let raw = std::fs::read_to_string(&skill_md)?;
+        let skill_md = self.dir.join(&safe).join("SKILL.md");
+        let base = std::fs::canonicalize(&self.dir).unwrap_or_else(|_| self.dir.clone());
+        let path = match std::fs::canonicalize(&skill_md) {
+            Ok(p) => p,
+            Err(_) => return Err(AppError::msg(format!("Skill not found: {safe}"))),
+        };
+        if !path.starts_with(&base) {
+            return Err(AppError::msg("Skill not found"));
+        }
+        let raw = std::fs::read_to_string(&path)?;
         let (name, description, body) = parse_skill_md(&raw);
         Ok(SkillContent {
             name,
             description,
             body,
-            path: skill_md.display().to_string(),
+            path: path.display().to_string(),
         })
     }
 
@@ -157,4 +166,33 @@ fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> AppResult
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod skill_path_tests {
+    use super::*;
+
+    #[test]
+    fn get_rejects_path_traversal_names() {
+        let dir = std::env::temp_dir().join(format!("prompton-skills-{}", uuid::Uuid::new_v4()));
+        let _ = std::fs::create_dir_all(&dir);
+        let store = SkillStore::new(dir.clone());
+        store
+            .save("safe-skill", "desc", "body")
+            .expect("save");
+
+        let err = store.get("../../../etc").expect_err("must reject");
+        assert!(err.public_message().contains("not found") || err.public_message().contains("Invalid"));
+
+        let ok = store.get("safe-skill").expect("safe get");
+        assert_eq!(ok.name, "safe-skill");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn sanitize_strips_separators() {
+        assert_eq!(sanitize_name("../Evil Skill"), "evil-skill");
+        assert_eq!(sanitize_name("///"), "");
+    }
 }

@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::error::{AppError, AppResult};
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum Dialect {
@@ -180,10 +182,6 @@ const WRITE_KEYWORDS: &[&str] = &[
     "COMMIT", "ROLLBACK", "SAVEPOINT", "RELEASE", "LOCK", "UNLOCK",
 ];
 
-const READ_KEYWORDS: &[&str] = &[
-    "SELECT", "SHOW", "EXPLAIN", "DESCRIBE", "DESC", "PRAGMA", "VALUES", "WITH",
-];
-
 /// Strip comments and string/identifier literals so keyword scans ignore noise.
 pub fn strip_sql_noise(sql: &str) -> String {
     let bytes = sql.as_bytes();
@@ -191,9 +189,18 @@ pub fn strip_sql_noise(sql: &str) -> String {
     let mut i = 0;
     while i < bytes.len() {
         let c = bytes[i] as char;
-        // Line comment
+        // SQL `--` line comment
         if c == '-' && i + 1 < bytes.len() && bytes[i + 1] == b'-' {
             i += 2;
+            while i < bytes.len() && bytes[i] != b'\n' {
+                i += 1;
+            }
+            out.push(' ');
+            continue;
+        }
+        // MySQL `#` line comment
+        if c == '#' {
+            i += 1;
             while i < bytes.len() && bytes[i] != b'\n' {
                 i += 1;
             }
@@ -233,6 +240,23 @@ pub fn strip_sql_noise(sql: &str) -> String {
             while i < bytes.len() {
                 if bytes[i] == b'"' {
                     if i + 1 < bytes.len() && bytes[i + 1] == b'"' {
+                        i += 2;
+                        continue;
+                    }
+                    i += 1;
+                    break;
+                }
+                i += 1;
+            }
+            out.push(' ');
+            continue;
+        }
+        // MySQL backtick identifier
+        if c == '`' {
+            i += 1;
+            while i < bytes.len() {
+                if bytes[i] == b'`' {
+                    if i + 1 < bytes.len() && bytes[i + 1] == b'`' {
                         i += 2;
                         continue;
                     }
@@ -345,6 +369,36 @@ fn sql_tokens(upper: &str) -> Vec<&str> {
         .collect()
 }
 
+/// SQLite pragmas that are safe to treat as reads when not assigning.
+const SAFE_READ_PRAGMAS: &[&str] = &[
+    "TABLE_INFO",
+    "TABLE_XINFO",
+    "TABLE_LIST",
+    "DATABASE_LIST",
+    "FOREIGN_KEY_LIST",
+    "INDEX_LIST",
+    "INDEX_INFO",
+    "INDEX_XINFO",
+    "COMPILE_OPTIONS",
+    "FUNCTION_LIST",
+    "MODULE_LIST",
+    "COLLATION_LIST",
+    "DATA_VERSION",
+    "SCHEMA_VERSION",
+    "USER_VERSION",
+    "FREELIST_COUNT",
+    "PAGE_COUNT",
+    "PAGE_SIZE",
+    "ENCODING",
+    "INTEGRITY_CHECK",
+    "QUICK_CHECK",
+];
+
+fn statement_has_into_side_effect(tokens: &[&str]) -> bool {
+    // Postgres `SELECT … INTO …` and MySQL `SELECT … INTO OUTFILE/DUMPFILE`.
+    tokens.iter().any(|t| *t == "INTO")
+}
+
 fn is_mutating_statement(sql: &str) -> bool {
     let clean = strip_sql_noise(sql);
     let upper = clean.trim().to_ascii_uppercase();
@@ -357,14 +411,63 @@ fn is_mutating_statement(sql: &str) -> bool {
     if WRITE_KEYWORDS.contains(&first) {
         return true;
     }
-    if READ_KEYWORDS.contains(&first) && first != "WITH" {
-        return false;
+
+    // EXPLAIN ANALYZE executes the plan (may mutate); bare EXPLAIN does not.
+    if first == "EXPLAIN" {
+        return tokens.get(1).copied() == Some("ANALYZE");
     }
+
+    if first == "PRAGMA" {
+        let name = tokens.get(1).copied().unwrap_or("");
+        let assigns = upper.contains('=');
+        if SAFE_READ_PRAGMAS.contains(&name) && !assigns {
+            return false;
+        }
+        // Assignments and unknown pragmas default to mutating.
+        return true;
+    }
+
+    if first == "SELECT" || first == "VALUES" || first == "SHOW" || first == "DESCRIBE" || first == "DESC"
+    {
+        return statement_has_into_side_effect(&tokens);
+    }
+
     if first == "WITH" {
-        // Any write keyword in the statement (including final CTE verb) ⇒ mutating.
-        return tokens.iter().any(|t| WRITE_KEYWORDS.contains(t));
+        // CTE final verb may write; SELECT INTO inside a CTE is also mutating.
+        return tokens.iter().any(|t| WRITE_KEYWORDS.contains(t))
+            || statement_has_into_side_effect(&tokens);
     }
+
+    // Unknown leading keywords → mutating (safe default).
     true
+}
+
+/// Host for Postgres/MySQL URLs — reject authority/query injection characters.
+pub fn validate_db_host(host: &str) -> AppResult<&str> {
+    let host = host.trim();
+    if host.is_empty() {
+        return Err(AppError::msg("Host is required"));
+    }
+    if host.len() > 253 {
+        return Err(AppError::msg("Host is too long"));
+    }
+    if host.chars().any(|c| {
+        matches!(c, '@' | '/' | '?' | '#' | '\\' | ' ' | '\t' | '\n' | '\r')
+            || c.is_control()
+    }) {
+        return Err(AppError::msg("Invalid host"));
+    }
+    Ok(host)
+}
+
+/// Allowlisted Postgres `sslmode` values only.
+pub fn validate_pg_ssl_mode(mode: &str) -> AppResult<&str> {
+    match mode.trim().to_ascii_lowercase().as_str() {
+        "disable" | "allow" | "prefer" | "require" | "verify-ca" | "verify-full" => {
+            Ok(mode.trim())
+        }
+        _ => Err(AppError::msg("Invalid ssl mode")),
+    }
 }
 
 /// True when SQL may mutate data/schema or run transactional/admin side effects.
@@ -396,7 +499,9 @@ mod sql_classify_tests {
         assert!(!is_mutating_sql("EXPLAIN SELECT 1"));
         assert!(!is_mutating_sql("PRAGMA table_info(t)"));
         assert!(!is_mutating_sql("-- comment\nSELECT 1"));
+        assert!(!is_mutating_sql("# mysql comment\nSELECT 1"));
         assert!(!is_mutating_sql("SELECT * FROM t WHERE note = 'DELETE ALL'"));
+        assert!(!is_mutating_sql("SELECT `delete` FROM t"));
     }
 
     #[test]
@@ -407,6 +512,45 @@ mod sql_classify_tests {
         assert!(is_mutating_sql("DROP TABLE t"));
         assert!(is_mutating_sql("CREATE TABLE t(id INT)"));
         assert!(is_mutating_sql("TRUNCATE t"));
+    }
+
+    #[test]
+    fn select_into_and_explain_analyze_are_mutating() {
+        assert!(is_mutating_sql("SELECT * INTO new_t FROM old_t"));
+        assert!(is_mutating_sql(
+            "SELECT id, name INTO OUTFILE '/tmp/x.csv' FROM t"
+        ));
+        assert!(is_mutating_sql(
+            "SELECT id INTO DUMPFILE '/tmp/x.bin' FROM t LIMIT 1"
+        ));
+        assert!(is_mutating_sql("EXPLAIN ANALYZE DELETE FROM t"));
+        assert!(is_mutating_sql("EXPLAIN ANALYZE SELECT 1"));
+        assert!(is_mutating_sql(
+            "WITH x AS (SELECT 1 AS id) SELECT * INTO new_t FROM x"
+        ));
+        assert!(!is_mutating_sql("EXPLAIN SELECT 1"));
+    }
+
+    #[test]
+    fn dangerous_pragmas_are_mutating() {
+        assert!(is_mutating_sql("PRAGMA writable_schema=ON"));
+        assert!(is_mutating_sql("PRAGMA journal_mode=WAL"));
+        assert!(!is_mutating_sql("PRAGMA table_info(t)"));
+        assert!(!is_mutating_sql("PRAGMA page_count"));
+    }
+
+    #[test]
+    fn host_and_ssl_validation() {
+        assert!(validate_db_host("localhost").is_ok());
+        assert!(validate_db_host("127.0.0.1").is_ok());
+        assert!(validate_db_host("db.example.com").is_ok());
+        assert!(validate_db_host("evil@host").is_err());
+        assert!(validate_db_host("host/path").is_err());
+        assert!(validate_db_host("host?x=1").is_err());
+        assert!(validate_pg_ssl_mode("prefer").is_ok());
+        assert!(validate_pg_ssl_mode("verify-full").is_ok());
+        assert!(validate_pg_ssl_mode("bogus").is_err());
+        assert!(validate_pg_ssl_mode("require&inject=1").is_err());
     }
 
     #[test]

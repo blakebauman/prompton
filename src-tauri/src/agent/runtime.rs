@@ -446,7 +446,7 @@ impl AgentRuntime {
             {
                 Ok(v) => v,
                 Err(e) => {
-                    let msg = e.to_string();
+                    let msg = e.public_message();
                     if msg == "Cancelled" || cancel.is_cancelled() {
                         let _ = app.emit(
                             "agent:error",
@@ -521,7 +521,7 @@ impl AgentRuntime {
                         );
                         return Ok(session_id);
                     }
-                    Err(e) => format!("Error: {e}"),
+                    Err(e) => format!("Error: {}", e.public_message()),
                 };
 
                 let _ = app.emit(
@@ -748,7 +748,7 @@ impl AgentRuntime {
                 }
                 Err(e) => {
                     // Expired / discarded after the UI still showed the dialog.
-                    format!("Write could not be executed: {e}")
+                    format!("Write could not be executed: {}", e.public_message())
                 }
             }
         };

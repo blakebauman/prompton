@@ -44,7 +44,8 @@ pub struct ConnectionManager {
     connections: RwLock<HashMap<Uuid, LiveConnection>>,
     configs: RwLock<Vec<ConnectionConfig>>,
     queries: RwLock<HashMap<Uuid, StoredQuery>>,
-    cancel_tokens: RwLock<HashMap<Uuid, CancellationToken>>,
+    /// In-flight cancel tokens keyed by query id, with owning connection.
+    cancel_tokens: RwLock<HashMap<Uuid, (Uuid, CancellationToken)>>,
     /// Staged writes awaiting human-in-the-loop approval.
     pending_writes: RwLock<HashMap<Uuid, PendingWrite>>,
     secrets: SecretStore,
@@ -233,16 +234,35 @@ impl ConnectionManager {
     }
 
     pub fn disconnect(&self, id: Uuid) -> AppResult<()> {
+        self.teardown_conn_runtime(id);
         self.connections.write().remove(&id);
         Ok(())
     }
 
     pub fn remove(&self, id: Uuid) -> AppResult<()> {
+        self.teardown_conn_runtime(id);
         self.connections.write().remove(&id);
         self.configs.write().retain(|c| c.id != id);
         let _ = self.secrets.delete_password(&id);
         self.persist_configs()?;
         Ok(())
+    }
+
+    /// Cancel in-flight work, drop staged writes, and clear buffered results.
+    fn teardown_conn_runtime(&self, conn_id: Uuid) {
+        let _ = self.discard_pending_for_conn(conn_id);
+        {
+            let mut tokens = self.cancel_tokens.write();
+            tokens.retain(|_, (cid, token)| {
+                if *cid == conn_id {
+                    token.cancel();
+                    false
+                } else {
+                    true
+                }
+            });
+        }
+        self.queries.write().retain(|_, q| q.conn_id != conn_id);
     }
 
     fn driver(&self, id: Uuid) -> AppResult<Arc<dyn Driver>> {
@@ -256,9 +276,11 @@ impl ConnectionManager {
     /// Drop a live pool when transport dies so the UI can show Offline.
     fn note_driver_error(&self, id: Uuid, err: AppError) -> AppError {
         if is_connection_lost(&err) {
+            self.teardown_conn_runtime(id);
             self.connections.write().remove(&id);
-            AppError::msg(format!("Connection lost ({err}). Reconnect to continue."))
+            AppError::msg("Connection lost. Reconnect to continue.")
         } else {
+            // Preserve typed errors for logging; UI sees public_message via Serialize.
             err
         }
     }
@@ -589,7 +611,9 @@ impl ConnectionManager {
     async fn execute_query(&self, req: RunQueryRequest) -> AppResult<QueryPage> {
         let query_id = req.query_id.unwrap_or_else(Uuid::new_v4);
         let token = CancellationToken::new();
-        self.cancel_tokens.write().insert(query_id, token.clone());
+        self.cancel_tokens
+            .write()
+            .insert(query_id, (req.conn_id, token.clone()));
 
         let driver = self.driver(req.conn_id)?;
         let statements = split_sql_statements(&req.sql);
@@ -704,7 +728,7 @@ impl ConnectionManager {
     }
 
     pub fn cancel_query(&self, query_id: Uuid) -> AppResult<()> {
-        if let Some(token) = self.cancel_tokens.write().remove(&query_id) {
+        if let Some((_, token)) = self.cancel_tokens.write().remove(&query_id) {
             token.cancel();
         }
         Ok(())

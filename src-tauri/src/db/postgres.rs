@@ -5,7 +5,10 @@ use sqlx::{Column, Pool, Postgres, Row, TypeInfo};
 use uuid::Uuid;
 
 use crate::db::driver::{Driver, ExecResult};
-use crate::db::types::{ColumnInfo, ConnectionConfig, SchemaNode, TableDescription};
+use crate::db::types::{
+    validate_db_host, validate_pg_ssl_mode, ColumnInfo, ConnectionConfig, SchemaNode,
+    TableDescription,
+};
 use crate::error::{AppError, AppResult};
 
 pub struct PostgresDriver {
@@ -16,11 +19,11 @@ pub struct PostgresDriver {
 
 impl PostgresDriver {
     pub async fn connect(config: &ConnectionConfig, password: &str) -> AppResult<Self> {
-        let host = config.host.as_deref().unwrap_or("localhost");
+        let host = validate_db_host(config.host.as_deref().unwrap_or("localhost"))?;
         let port = config.port.unwrap_or(5432);
         let database = config.database.as_deref().unwrap_or("postgres");
         let username = config.username.as_deref().unwrap_or("postgres");
-        let ssl = config.ssl_mode.as_deref().unwrap_or("prefer");
+        let ssl = validate_pg_ssl_mode(config.ssl_mode.as_deref().unwrap_or("prefer"))?;
         let url = format!(
             "postgres://{}:{}@{}:{}/{}?sslmode={}",
             urlencoding::encode(username),
