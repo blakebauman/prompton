@@ -49,10 +49,10 @@ export function WriteConfirmDialog({
         onReject();
       }}
     >
-      <DialogContent className="gap-3 sm:max-w-md">
-        <DialogHeader className="gap-2">
+      <DialogContent className="gap-3 p-4 sm:max-w-md">
+        <DialogHeader className="gap-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <DialogTitle>
+            <DialogTitle className="text-base">
               {isProduction
                 ? "Approve production write"
                 : "Confirm mutating SQL"}
@@ -60,24 +60,27 @@ export function WriteConfirmDialog({
             {isProduction && <ProdBadge unlocked={!!adminWritesUnlocked} />}
           </div>
           {reason && (
-            <p className="text-sm text-muted-foreground text-pretty">{reason}</p>
+            <p className="text-[12px] text-muted-foreground text-pretty">
+              {reason}
+            </p>
           )}
         </DialogHeader>
 
         {isProduction && (
-          <div className="rounded-md border border-prod/30 bg-prod-muted px-3 py-2 text-xs leading-snug text-prod text-pretty">
+          <div className="rounded-md border border-prod/30 bg-prod-muted px-2.5 py-2 text-[11px] leading-snug text-prod text-pretty">
             {adminWritesUnlocked
               ? "Admin unlock is on. This statement still needs your explicit approval before it runs."
               : "Production is locked. Approving runs this statement only; the connection stays read-only afterward."}
           </div>
         )}
 
-        <pre className="max-h-56 overflow-auto rounded-md border border-border/60 bg-muted/40 p-3 font-mono text-xs leading-relaxed">
+        <pre className="max-h-56 overflow-auto rounded-md border border-border/60 bg-muted/40 p-2.5 font-mono text-[11px] leading-relaxed">
           {sql}
         </pre>
 
         <DialogFooter>
           <Button
+            size="xs"
             variant="outline"
             onClick={() => {
               outcome.current = "reject";
@@ -87,6 +90,7 @@ export function WriteConfirmDialog({
             Reject
           </Button>
           <Button
+            size="xs"
             variant={isProduction ? "destructive" : "default"}
             className={
               isProduction

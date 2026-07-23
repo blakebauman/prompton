@@ -95,6 +95,11 @@ export function SqlEditor() {
         setPending(staged);
       } catch (e) {
         setStatus(String(e));
+        toast({
+          title: "Couldn’t stage write",
+          description: String(e),
+          tone: "error",
+        });
       }
       return;
     }
@@ -119,6 +124,7 @@ export function SqlEditor() {
     if (!approved) {
       await api.confirmWrite(id, false);
       setStatus("Write rejected");
+      toast({ title: "Write rejected" });
       return;
     }
     setRunning(true);
@@ -128,12 +134,17 @@ export function SqlEditor() {
       if (page) {
         setResult(page);
         openArtifact("results");
-        setStatus(
-          `Write approved · ${page.affectedRows ?? page.totalRows} affected · ${page.durationMs}ms`,
-        );
+        const msg = `Write approved · ${page.affectedRows ?? page.totalRows} affected · ${page.durationMs}ms`;
+        setStatus(msg);
+        toast({ title: "Write applied", description: msg, tone: "success" });
       }
     } catch (e) {
       setStatus(String(e));
+      toast({
+        title: "Write failed",
+        description: String(e),
+        tone: "error",
+      });
     } finally {
       setRunning(false);
     }

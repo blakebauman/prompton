@@ -461,6 +461,11 @@ export function ResultsGrid() {
       setPendingWrite(staged);
     } catch (e) {
       setStatus(String(e));
+      toast({
+        title: "Couldn’t stage edit",
+        description: String(e),
+        tone: "error",
+      });
     }
   }
 
@@ -473,6 +478,7 @@ export function ResultsGrid() {
       await api.confirmWrite(id, false);
       setPendingEdit(null);
       setStatus("Edit rejected");
+      toast({ title: "Edit rejected" });
       return;
     }
     setRunning(true);
@@ -486,13 +492,18 @@ export function ResultsGrid() {
         );
         setResult({ ...result, rows });
       }
-      setStatus(
-        page
-          ? `Updated · ${page.affectedRows ?? 1} row · ${page.durationMs}ms`
-          : "Updated",
-      );
+      const msg = page
+        ? `Updated · ${page.affectedRows ?? 1} row · ${page.durationMs}ms`
+        : "Updated";
+      setStatus(msg);
+      toast({ title: "Row updated", description: msg, tone: "success" });
     } catch (e) {
       setStatus(String(e));
+      toast({
+        title: "Update failed",
+        description: String(e),
+        tone: "error",
+      });
     } finally {
       setPendingEdit(null);
       setRunning(false);

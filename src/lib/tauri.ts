@@ -54,6 +54,10 @@ async function invoke<T>(
   return tauriInvoke<T>(cmd, args);
 }
 
+/**
+ * Tauri renames Rust snake_case command args to camelCase for JS.
+ * Nested request structs use serde `rename_all = "camelCase"` already.
+ */
 export const api = {
   listConnections: () => invoke<ConnectionInfo[]>("list_connections"),
   connectDb: (request: ConnectRequest) =>
@@ -67,7 +71,7 @@ export const api = {
   runQuery: (request: RunQueryRequest) =>
     invoke<QueryPage>("run_query", {
       request,
-      allow_mutating: false,
+      allowMutating: false,
     }),
   requestWriteApproval: (
     connId: string,
@@ -75,19 +79,19 @@ export const api = {
     sessionId?: string | null,
   ) =>
     invoke<PendingConfirmation>("request_write_approval", {
-      conn_id: connId,
+      connId,
       sql,
-      session_id: sessionId ?? null,
+      sessionId: sessionId ?? null,
     }),
   confirmWrite: (confirmationId: string, approved: boolean) =>
     invoke<QueryPage | null>("confirm_write", {
-      confirmation_id: confirmationId,
+      confirmationId,
       approved,
     }),
   setConnectionProduction: (id: string, isProduction: boolean) =>
     invoke<ConnectionInfo>("set_connection_production", {
       id,
-      is_production: isProduction,
+      isProduction,
     }),
   setAdminWritesUnlocked: (id: string, unlocked: boolean) =>
     invoke<ConnectionInfo>("set_admin_writes_unlocked", {
@@ -95,41 +99,41 @@ export const api = {
       unlocked,
     }),
   cancelQuery: (queryId: string) =>
-    invoke<void>("cancel_query", { query_id: queryId }),
+    invoke<void>("cancel_query", { queryId }),
   fetchQueryPage: (queryId: string, offset: number, limit: number) =>
     invoke<QueryPage>("fetch_query_page", {
-      query_id: queryId,
+      queryId,
       offset,
       limit,
     }),
   explainQuery: (connId: string, sql: string) =>
-    invoke<string>("explain_query", { conn_id: connId, sql }),
+    invoke<string>("explain_query", { connId, sql }),
   agentChat: (request: {
     sessionId?: string | null;
     connId: string;
     message: string;
   }) => invoke<string>("agent_chat", { request }),
   agentCancel: (sessionId: string) =>
-    invoke<void>("agent_cancel", { session_id: sessionId }),
+    invoke<void>("agent_cancel", { sessionId }),
   agentConfirm: (confirmationId: string, approved: boolean) =>
     invoke<void>("agent_confirm", {
-      confirmation_id: confirmationId,
+      confirmationId,
       approved,
     }),
   agentGetSettings: () => invoke<AgentSettings>("agent_get_settings"),
   agentSetSettings: (settings: AgentSettings, apiKey?: string) =>
     invoke<void>("agent_set_settings", {
       settings,
-      api_key: apiKey,
+      apiKey,
     }),
   agentLastContext: (sessionId: string) =>
     invoke<BudgetReport | null>("agent_last_context", {
-      session_id: sessionId,
+      sessionId,
     }),
   listOllamaModels: (baseUrl?: string) =>
     invoke<{ name: string; size?: number; supportsTools: boolean }[]>(
       "list_ollama_models",
-      { base_url: baseUrl },
+      { baseUrl },
     ),
   listSkills: () => invoke<SkillMeta[]>("list_skills"),
   getSkill: (name: string) =>
