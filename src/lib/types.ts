@@ -64,6 +64,8 @@ export interface QueryPage {
   limit: number;
   totalRows: number;
   truncated: boolean;
+  /** Present when truncated — server row cap that stopped the fetch. */
+  rowCap?: number | null;
   affectedRows?: number | null;
   durationMs: number;
   sql: string;

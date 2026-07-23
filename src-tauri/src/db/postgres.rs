@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use futures::TryStreamExt;
 use sqlx::postgres::{PgPoolOptions, PgRow};
 use sqlx::{Column, Pool, Postgres, Row, TypeInfo};
 use uuid::Uuid;
@@ -223,9 +224,19 @@ impl Driver for PostgresDriver {
             });
         }
 
-        let rows = sqlx::query(trimmed).fetch_all(&self.pool).await?;
-        let truncated = rows.len() > max_rows;
-        let take = rows.into_iter().take(max_rows).collect::<Vec<_>>();
+        // Stream rows and stop at max_rows+1 so large results never fully materialize.
+        let mut stream = sqlx::query(trimmed).fetch(&self.pool);
+        let mut take: Vec<PgRow> = Vec::with_capacity(max_rows.min(1024));
+        let mut truncated = false;
+        while let Some(row) = stream.try_next().await? {
+            if take.len() >= max_rows {
+                truncated = true;
+                break;
+            }
+            take.push(row);
+        }
+        drop(stream);
+
         let columns = if let Some(first) = take.first() {
             first
                 .columns()

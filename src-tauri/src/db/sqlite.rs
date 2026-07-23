@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use futures::TryStreamExt;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions, SqliteRow};
 use sqlx::{Column, ConnectOptions, Pool, Row, Sqlite, TypeInfo};
 use std::str::FromStr;
@@ -147,9 +148,19 @@ impl Driver for SqliteDriver {
             });
         }
 
-        let rows = sqlx::query(trimmed).fetch_all(&self.pool).await?;
-        let truncated = rows.len() > max_rows;
-        let take = rows.into_iter().take(max_rows).collect::<Vec<_>>();
+        // Stream rows and stop at max_rows so large results never fully materialize.
+        let mut stream = sqlx::query(trimmed).fetch(&self.pool);
+        let mut take: Vec<SqliteRow> = Vec::with_capacity(max_rows.min(1024));
+        let mut truncated = false;
+        while let Some(row) = stream.try_next().await? {
+            if take.len() >= max_rows {
+                truncated = true;
+                break;
+            }
+            take.push(row);
+        }
+        drop(stream);
+
         let columns = if let Some(first) = take.first() {
             first
                 .columns()
@@ -186,5 +197,53 @@ impl Driver for SqliteDriver {
 
     fn connection_id(&self) -> Uuid {
         self.id
+    }
+}
+
+#[cfg(test)]
+mod fetch_cap_tests {
+    use super::*;
+    use crate::db::types::Dialect;
+
+    #[tokio::test]
+    async fn streams_and_caps_without_loading_all() {
+        let dir = std::env::temp_dir().join(format!("prompton-cap-{}", Uuid::new_v4()));
+        let _ = std::fs::create_dir_all(&dir);
+        let path = dir.join("t.db");
+        let driver = SqliteDriver::connect(&ConnectionConfig {
+            id: Uuid::new_v4(),
+            name: "t".into(),
+            dialect: Dialect::Sqlite,
+            host: None,
+            port: None,
+            database: None,
+            username: None,
+            file_path: Some(path.display().to_string()),
+            color: "#000".into(),
+            ssl_mode: None,
+            is_production: false,
+            admin_writes_unlocked: false,
+        })
+        .await
+        .expect("connect");
+
+        driver
+            .execute("CREATE TABLE t(id INTEGER)", 10)
+            .await
+            .unwrap();
+        driver
+            .execute(
+                "WITH RECURSIVE r(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM r WHERE i < 40)
+                 INSERT INTO t SELECT i FROM r",
+                10,
+            )
+            .await
+            .unwrap();
+
+        let res = driver.execute("SELECT id FROM t ORDER BY id", 7).await.unwrap();
+        assert_eq!(res.rows.len(), 7);
+        assert!(res.truncated);
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

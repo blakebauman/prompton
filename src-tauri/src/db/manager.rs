@@ -13,7 +13,7 @@ use crate::db::sqlite::SqliteDriver;
 use crate::db::types::{
     ConnectRequest, ConnectionConfig, ConnectionInfo, Dialect, PendingWrite, QueryColumn,
     QueryPage, RunQueryRequest, SchemaNode, TableDescription, is_mutating_sql,
-    split_sql_statements,
+    split_sql_statements, MAX_RESULT_ROWS,
 };
 use crate::error::{AppError, AppResult, is_connection_lost};
 use crate::secrets::SecretStore;
@@ -327,6 +327,7 @@ impl ConnectionManager {
             limit,
             total_rows: result.rows.len(),
             truncated: result.truncated,
+            row_cap: result.truncated.then_some(limit),
             affected_rows: result.affected_rows,
             duration_ms: started.elapsed().as_millis() as u64,
             sql: format!("SAMPLE {schema}.{table}"),
@@ -547,8 +548,8 @@ impl ConnectionManager {
             return Err(AppError::msg("Empty SQL"));
         }
 
-        // Fetch a large window into memory; UI pages through it via fetch_page.
-        let max_rows = 50_000;
+        // Stream up to a hard cap; UI pages through the buffered window via fetch_page.
+        let max_rows = MAX_RESULT_ROWS;
         let page_size = req.page_size.max(1).min(5_000);
         let started = Instant::now();
 
@@ -613,6 +614,7 @@ impl ConnectionManager {
         let page_limit = page_size.min(total_rows.max(1));
         let page_rows = result.rows.iter().take(page_limit).cloned().collect();
 
+        let was_truncated = truncated || result.truncated;
         let page = QueryPage {
             query_id,
             columns: result
@@ -627,7 +629,8 @@ impl ConnectionManager {
             offset: 0,
             limit: page_limit,
             total_rows,
-            truncated: truncated || result.truncated,
+            truncated: was_truncated,
+            row_cap: was_truncated.then_some(max_rows),
             affected_rows,
             duration_ms,
             sql: req.sql.clone(),
@@ -684,6 +687,7 @@ impl ConnectionManager {
             limit,
             total_rows: q.rows.len(),
             truncated: q.truncated,
+            row_cap: q.truncated.then_some(MAX_RESULT_ROWS),
             affected_rows: q.affected_rows,
             duration_ms: q.duration_ms,
             sql: q.sql,

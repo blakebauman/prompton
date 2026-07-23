@@ -305,13 +305,19 @@ export function ResultsGrid() {
       }
       const label =
         scope === "all"
-          ? "all rows"
+          ? result.truncated
+            ? "capped rows"
+            : "all loaded rows"
           : scope === "loaded"
             ? "loaded rows"
             : "selection";
       const msg = `Exported ${rows.length.toLocaleString()} ${label} as ${format.toUpperCase()}`;
-      setStatus(msg);
-      toast({ title: "Export ready", description: msg, tone: "success" });
+      const detail =
+        scope === "all" && result.truncated
+          ? `${msg} · result capped at ${(result.rowCap ?? result.totalRows).toLocaleString()} rows`
+          : msg;
+      setStatus(detail);
+      toast({ title: "Export ready", description: detail, tone: "success" });
     } catch (e) {
       setStatus(String(e));
       toast({
@@ -571,7 +577,9 @@ export function ResultsGrid() {
               {result.totalRows.toLocaleString()}
             </span>{" "}
             rows
-            {result.truncated ? " · truncated" : ""}
+            {result.truncated
+              ? ` · first ${(result.rowCap ?? result.totalRows).toLocaleString()} (capped)`
+              : ""}
             {" · "}
             {result.durationMs}ms
             {result.affectedRows != null
@@ -699,13 +707,13 @@ export function ResultsGrid() {
                 onClick={() => void exportResults("csv", "all")}
               >
                 <Table2 className="size-3.5" />
-                CSV · all rows
+                {result.truncated ? "CSV · capped result" : "CSV · all loaded"}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => void exportResults("csv", "loaded")}
               >
                 <Table2 className="size-3.5" />
-                CSV · loaded
+                CSV · loaded page
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={selected.size === 0}
@@ -719,13 +727,13 @@ export function ResultsGrid() {
                 onClick={() => void exportResults("json", "all")}
               >
                 <FileJson className="size-3.5" />
-                JSON · all rows
+                {result.truncated ? "JSON · capped result" : "JSON · all loaded"}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => void exportResults("json", "loaded")}
               >
                 <FileJson className="size-3.5" />
-                JSON · loaded
+                JSON · loaded page
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={selected.size === 0}

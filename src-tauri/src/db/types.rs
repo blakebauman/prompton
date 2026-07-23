@@ -118,6 +118,9 @@ pub struct QueryColumn {
     pub data_type: String,
 }
 
+/// Hard cap on rows buffered for a single query result set.
+pub const MAX_RESULT_ROWS: usize = 50_000;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QueryPage {
@@ -128,6 +131,9 @@ pub struct QueryPage {
     pub limit: usize,
     pub total_rows: usize,
     pub truncated: bool,
+    /// Present when `truncated` — the row cap that stopped the fetch.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub row_cap: Option<usize>,
     pub affected_rows: Option<u64>,
     pub duration_ms: u64,
     pub sql: String,
