@@ -4,6 +4,13 @@ High-performance, native, agentic database client — conversational-first — f
 
 **Domain:** [prompton.dev](https://prompton.dev)
 
+## Documentation
+
+Detailed guides live under [`docs/`](./docs/README.md):
+
+- **Users:** [Getting started](./docs/user/getting-started.md) · [Workspace](./docs/user/workspace.md) · [Assistant](./docs/user/assistant.md) · [Safety](./docs/user/safety.md) · [Troubleshooting](./docs/user/troubleshooting.md)
+- **Technical teams:** [Architecture](./docs/technical/architecture.md) · [Agent](./docs/technical/agent.md) · [Database](./docs/technical/database.md) · [Security & data](./docs/technical/security-and-data.md) · [Contributing](./docs/technical/contributing.md) · [Releases](./docs/technical/releases.md)
+
 ## MVP features
 
 - Multi-connection workspace (PostgreSQL, MySQL, SQLite)
@@ -124,3 +131,5 @@ Linux bundles (`deb` / `appimage` / `rpm`) are built on Ubuntu runners.
 - **Backend:** Tauri 2 / Rust — connection pools, query engine, agent runtime, history/skills/prompts, secrets
 
 Agent tools never receive full tables by default; the context budgeter sends summaries and capped slices only. Switching connections cancels in-flight agent/query work and clears chat, results, and confirmations so sessions stay isolated.
+
+Full diagrams, command maps, HITL rules, and data layout: [`docs/technical/`](./docs/technical/architecture.md).
