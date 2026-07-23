@@ -429,9 +429,8 @@ export function AssistantPanel({
       <div className="relative z-20 flex h-10 shrink-0 items-center justify-between gap-2 px-4">
         <div className="flex min-w-0 items-center gap-2.5">
           {agentBusy && <ActivityPulse mode="busy" />}
-          <h2 className="min-w-0">
+          <h2 className="min-w-0" aria-label="Prompton">
             <BrandMark size="md" />
-            <span className="sr-only">Prompton assistant</span>
           </h2>
           {active && (
             <span className="truncate text-[11px] text-muted-foreground">
