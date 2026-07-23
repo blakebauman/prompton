@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { PanelRightClose, PanelRightOpen } from "lucide-react";
+import { PanelRightClose, PanelRightOpen, Plug } from "lucide-react";
 
 import {
   ActivityRail,
@@ -37,9 +37,14 @@ import {
   requestRunSql,
   useAppShortcuts,
 } from "@/hooks/use-app-shortcuts";
-import { isDesktopRequiredError } from "@/lib/tauri";
+import {
+  reconnectConnection,
+  refreshConnections,
+} from "@/lib/connection-health";
+import { api, isDesktopRequiredError } from "@/lib/tauri";
 import { TOP_SAFE_AREA_PADDING } from "@/lib/ui";
 import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 import { useWorkspace } from "@/stores/workspace";
 
 export default function App() {
@@ -57,6 +62,7 @@ function AppShell() {
   const {
     status,
     setStatus,
+    setSchemas,
     connections,
     activeConnId,
     agentBusy,
@@ -65,7 +71,37 @@ function AppShell() {
   const { state: artifact, toggle, open: openArtifact } = useArtifact();
   const active = connections.find((c) => c.id === activeConnId);
   const [activity, setActivity] = useState<ActivityId>("workspace");
+  const [reconnecting, setReconnecting] = useState(false);
   const busy = agentBusy || running;
+
+  async function onReconnectActive() {
+    if (!activeConnId || !active) return;
+    setReconnecting(true);
+    try {
+      await reconnectConnection(activeConnId);
+      try {
+        setSchemas(await api.listSchemas(activeConnId));
+      } catch {
+        /* schemas optional after reconnect */
+      }
+      setStatus(`Active: ${active.name}`);
+      toast({
+        title: "Reconnected",
+        description: active.name,
+        tone: "success",
+      });
+    } catch (e) {
+      await refreshConnections().catch(() => undefined);
+      setStatus(String(e));
+      toast({
+        title: "Reconnect failed",
+        description: String(e),
+        tone: "error",
+      });
+    } finally {
+      setReconnecting(false);
+    }
+  }
   const tone = statusTone(status, busy);
   const showStatus =
     !!status &&
@@ -140,6 +176,18 @@ function AppShell() {
                     </span>
                     {active.isProduction && (
                       <ProdBadge unlocked={!!active.adminWritesUnlocked} />
+                    )}
+                    {!active.connected && (
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        className="h-6 px-2 text-[11px]"
+                        disabled={reconnecting}
+                        onClick={() => void onReconnectActive()}
+                      >
+                        <Plug className="size-3" />
+                        {reconnecting ? "Connecting…" : "Reconnect"}
+                      </Button>
                     )}
                   </span>
                 </>

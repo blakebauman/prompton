@@ -1,3 +1,4 @@
+import { handleMaybeLostConnection } from "@/lib/connection-health";
 import { api } from "@/lib/tauri";
 import type { QueryPage, RunQueryRequest } from "@/lib/types";
 import { useWorkspace } from "@/stores/workspace";
@@ -27,6 +28,9 @@ export async function runCancellableQuery(
   ws.setRunning(true);
   try {
     return await api.runQuery({ ...request, queryId });
+  } catch (e) {
+    await handleMaybeLostConnection(e, request.connId);
+    throw e;
   } finally {
     const cur = useWorkspace.getState();
     if (cur.activeQueryId === queryId) {
@@ -46,10 +50,14 @@ export async function confirmCancellableWrite(
   }
   const queryId = crypto.randomUUID();
   const ws = useWorkspace.getState();
+  const connId = ws.activeConnId;
   ws.setActiveQueryId(queryId);
   ws.setRunning(true);
   try {
     return await api.confirmWrite(confirmationId, true, queryId);
+  } catch (e) {
+    await handleMaybeLostConnection(e, connId);
+    throw e;
   } finally {
     const cur = useWorkspace.getState();
     if (cur.activeQueryId === queryId) {

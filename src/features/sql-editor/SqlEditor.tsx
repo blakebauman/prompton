@@ -16,6 +16,10 @@ import { toast } from "@/hooks/use-toast";
 import { RUN_SQL_EVENT } from "@/hooks/use-app-shortcuts";
 import { formatSql } from "@/lib/format-sql";
 import {
+  handleMaybeLostConnection,
+  isConnectionLostError,
+} from "@/lib/connection-health";
+import {
   cancelActiveQuery,
   confirmCancellableWrite,
   isQueryCancelled,
@@ -70,6 +74,7 @@ export function SqlEditor() {
         toast({ title: "Query cancelled" });
         return;
       }
+      if (isConnectionLostError(e)) return;
       setStatus(String(e));
       toast({ title: "Query failed", description: String(e), tone: "error" });
     }
@@ -87,6 +92,7 @@ export function SqlEditor() {
       setStatus("Explain plan ready");
       toast({ title: "Explain ready", tone: "success" });
     } catch (e) {
+      if (await handleMaybeLostConnection(e, activeConnId)) return;
       setStatus(String(e));
       toast({ title: "Explain failed", description: String(e), tone: "error" });
     }
@@ -154,6 +160,7 @@ export function SqlEditor() {
         toast({ title: "Query cancelled" });
         return;
       }
+      if (isConnectionLostError(e)) return;
       setStatus(String(e));
       toast({
         title: "Write failed",

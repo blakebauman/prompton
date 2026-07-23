@@ -41,6 +41,7 @@ pub fn run() {
             commands::list_connections,
             commands::connect_db,
             commands::reconnect_db,
+            commands::ping_db,
             commands::disconnect_db,
             commands::remove_connection,
             commands::list_schemas,

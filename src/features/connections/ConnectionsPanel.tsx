@@ -47,6 +47,12 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
+import {
+  ensureConnectionAlive,
+  handleMaybeLostConnection,
+  reconnectConnection,
+  refreshConnections,
+} from "@/lib/connection-health";
 import { connectionIdentityColor } from "@/lib/connection-mark";
 import { abandonConnectionWork } from "@/lib/session";
 import { api, isDesktopRequiredError } from "@/lib/tauri";
@@ -105,8 +111,7 @@ export function ConnectionsPanel() {
   }, [dialect, form.filePath]);
 
   async function refresh() {
-    const list = await api.listConnections();
-    setConnections(list);
+    await refreshConnections();
   }
 
   useEffect(() => {
@@ -124,18 +129,35 @@ export function ConnectionsPanel() {
     const conn = connections.find((c) => c.id === id);
     if (conn && !conn.connected) {
       try {
-        await api.reconnectDb(id);
-        await refresh();
+        await reconnectConnection(id);
+        toast({
+          title: "Reconnected",
+          description: conn.name,
+          tone: "success",
+        });
       } catch (e) {
         setStatus(String(e));
+        toast({
+          title: "Reconnect failed",
+          description: String(e),
+          tone: "error",
+        });
         return;
       }
+    } else if (conn?.connected) {
+      const alive = await ensureConnectionAlive(id);
+      if (!alive) return;
     }
     try {
       const schemas = await api.listSchemas(id);
       setSchemas(schemas);
-      setStatus(`Active: ${conn?.name ?? id}`);
+      const name =
+        useWorkspace.getState().connections.find((c) => c.id === id)?.name ??
+        conn?.name ??
+        id;
+      setStatus(`Active: ${name}`);
     } catch (e) {
+      if (await handleMaybeLostConnection(e, id)) return;
       setStatus(String(e));
     }
   }
@@ -361,8 +383,7 @@ export function ConnectionsPanel() {
                                 description: c.name,
                               });
                             } else {
-                              await api.reconnectDb(c.id);
-                              await refresh();
+                              await reconnectConnection(c.id);
                               toast({
                                 title: "Connected",
                                 description: c.name,

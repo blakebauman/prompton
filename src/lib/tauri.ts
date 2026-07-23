@@ -63,6 +63,7 @@ export const api = {
   connectDb: (request: ConnectRequest) =>
     invoke<ConnectionInfo>("connect_db", { request }),
   reconnectDb: (id: string) => invoke<ConnectionInfo>("reconnect_db", { id }),
+  pingDb: (id: string) => invoke<void>("ping_db", { id }),
   disconnectDb: (id: string) => invoke<void>("disconnect_db", { id }),
   removeConnection: (id: string) => invoke<void>("remove_connection", { id }),
   listSchemas: (id: string) => invoke<SchemaNode[]>("list_schemas", { id }),

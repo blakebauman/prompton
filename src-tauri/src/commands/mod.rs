@@ -34,6 +34,11 @@ pub async fn reconnect_db(state: State<'_, AppState>, id: Uuid) -> AppResult<Con
 }
 
 #[tauri::command]
+pub async fn ping_db(state: State<'_, AppState>, id: Uuid) -> AppResult<()> {
+    state.db.ping(id).await
+}
+
+#[tauri::command]
 pub fn disconnect_db(state: State<'_, AppState>, id: Uuid) -> AppResult<()> {
     state.db.disconnect(id)
 }

@@ -38,6 +38,7 @@ import {
   parseEditedValue,
   parseSimpleSelectTarget,
 } from "@/lib/sql-edit";
+import { isConnectionLostError } from "@/lib/connection-health";
 import {
   cancelActiveQuery,
   confirmCancellableWrite,
@@ -210,8 +211,8 @@ export function ResultsGrid() {
       setResult(page);
       setStatus(`Done · ${page.totalRows} rows · ${page.durationMs}ms`);
     } catch (e) {
-      if (isQueryCancelled(e)) {
-        setStatus("Query cancelled");
+      if (isQueryCancelled(e) || isConnectionLostError(e)) {
+        if (isQueryCancelled(e)) setStatus("Query cancelled");
         return;
       }
       try {
@@ -223,8 +224,8 @@ export function ResultsGrid() {
         setResult(page);
         setStatus(`Done · ${page.totalRows} rows · ${page.durationMs}ms`);
       } catch (e2) {
-        if (isQueryCancelled(e2)) {
-          setStatus("Query cancelled");
+        if (isQueryCancelled(e2) || isConnectionLostError(e2)) {
+          if (isQueryCancelled(e2)) setStatus("Query cancelled");
           return;
         }
         setStatus(String(e2));
@@ -514,6 +515,7 @@ export function ResultsGrid() {
         toast({ title: "Query cancelled" });
         return;
       }
+      if (isConnectionLostError(e)) return;
       setStatus(String(e));
       toast({
         title: "Update failed",

@@ -16,6 +16,10 @@ import { ListPaneSearch } from "@/components/list-pane";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import {
+  handleMaybeLostConnection,
+  isConnectionLostError,
+} from "@/lib/connection-health";
+import {
   isQueryCancelled,
   runCancellableQuery,
 } from "@/lib/run-query";
@@ -110,6 +114,7 @@ export function SchemaPanel() {
       setStatus("Schema refreshed");
       toast({ title: "Schema refreshed", tone: "success" });
     } catch (e) {
+      if (await handleMaybeLostConnection(e, activeConnId)) return;
       setStatus(String(e));
       toast({
         title: "Schema refresh failed",
@@ -137,6 +142,7 @@ export function SchemaPanel() {
       setColumnsByTable((s) => ({ ...s, [id]: desc.columns }));
       return desc.columns;
     } catch (e) {
+      if (await handleMaybeLostConnection(e, activeConnId)) return null;
       setStatus(String(e));
       toast({
         title: "Couldn’t load columns",
@@ -200,6 +206,7 @@ export function SchemaPanel() {
         toast({ title: "Query cancelled" });
         return;
       }
+      if (isConnectionLostError(e)) return;
       setStatus(String(e));
       toast({
         title: "Couldn’t load table",

@@ -14,7 +14,7 @@ use crate::db::types::{
     ConnectRequest, ConnectionConfig, ConnectionInfo, Dialect, PendingWrite, QueryColumn,
     QueryPage, RunQueryRequest, SchemaNode, TableDescription, is_mutating_sql,
 };
-use crate::error::{AppError, AppResult};
+use crate::error::{AppError, AppResult, is_connection_lost};
 use crate::secrets::SecretStore;
 
 struct LiveConnection {
@@ -258,8 +258,30 @@ impl ConnectionManager {
             .ok_or_else(|| AppError::msg("Connection is not active. Connect first."))
     }
 
+    /// Drop a live pool when transport dies so the UI can show Offline.
+    fn note_driver_error(&self, id: Uuid, err: AppError) -> AppError {
+        if is_connection_lost(&err) {
+            self.connections.write().remove(&id);
+            AppError::msg(format!("Connection lost ({err}). Reconnect to continue."))
+        } else {
+            err
+        }
+    }
+
+    pub async fn ping(&self, id: Uuid) -> AppResult<()> {
+        let driver = self.driver(id)?;
+        match driver.ping().await {
+            Ok(()) => Ok(()),
+            Err(e) => Err(self.note_driver_error(id, e)),
+        }
+    }
+
     pub async fn list_schemas(&self, id: Uuid) -> AppResult<Vec<SchemaNode>> {
-        self.driver(id)?.list_schemas().await
+        let driver = self.driver(id)?;
+        match driver.list_schemas().await {
+            Ok(v) => Ok(v),
+            Err(e) => Err(self.note_driver_error(id, e)),
+        }
     }
 
     pub async fn describe_table(
@@ -268,7 +290,11 @@ impl ConnectionManager {
         schema: String,
         table: String,
     ) -> AppResult<TableDescription> {
-        self.driver(id)?.describe_table(&schema, &table).await
+        let driver = self.driver(id)?;
+        match driver.describe_table(&schema, &table).await {
+            Ok(v) => Ok(v),
+            Err(e) => Err(self.note_driver_error(id, e)),
+        }
     }
 
     pub async fn sample_rows(
@@ -279,10 +305,11 @@ impl ConnectionManager {
         limit: usize,
     ) -> AppResult<QueryPage> {
         let started = Instant::now();
-        let result = self
-            .driver(id)?
-            .sample_rows(&schema, &table, limit)
-            .await?;
+        let driver = self.driver(id)?;
+        let result = match driver.sample_rows(&schema, &table, limit).await {
+            Ok(v) => v,
+            Err(e) => return Err(self.note_driver_error(id, e)),
+        };
         let query_id = Uuid::new_v4();
         let page = QueryPage {
             query_id,
@@ -529,7 +556,10 @@ impl ConnectionManager {
         };
 
         self.cancel_tokens.write().remove(&query_id);
-        let result = result?;
+        let result = match result {
+            Ok(v) => v,
+            Err(e) => return Err(self.note_driver_error(req.conn_id, e)),
+        };
         let duration_ms = started.elapsed().as_millis() as u64;
         let total_rows = result.rows.len();
         let page_limit = page_size.min(total_rows.max(1));
@@ -613,7 +643,11 @@ impl ConnectionManager {
     }
 
     pub async fn explain(&self, conn_id: Uuid, sql: String) -> AppResult<String> {
-        self.driver(conn_id)?.explain(&sql).await
+        let driver = self.driver(conn_id)?;
+        match driver.explain(&sql).await {
+            Ok(v) => Ok(v),
+            Err(e) => Err(self.note_driver_error(conn_id, e)),
+        }
     }
 
     #[allow(dead_code)]
