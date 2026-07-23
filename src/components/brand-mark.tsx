@@ -1,5 +1,4 @@
-import { Database } from "lucide-react";
-
+import { PromptonMarkIcon } from "@/components/prompton-mark-icon";
 import { cn } from "@/lib/utils";
 
 type BrandMarkProps = {
@@ -10,8 +9,8 @@ type BrandMarkProps = {
 };
 
 /**
- * Compact Prompton mark (Lucide database). Use with wordmark where the
- * agent/product identity should lead; mark-only for dense chrome.
+ * Compact Prompton mark. Use with wordmark where the agent/product
+ * identity should lead; mark-only for dense chrome.
  */
 export function BrandMark({
   className,
@@ -28,7 +27,7 @@ export function BrandMark({
         className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/40 text-foreground"
         aria-hidden
       >
-        <Database className="size-3.5" strokeWidth={2} />
+        <PromptonMarkIcon className="size-3.5" />
       </span>
       {wordmark && (
         <span className={cn("font-semibold tracking-tight", name)}>
