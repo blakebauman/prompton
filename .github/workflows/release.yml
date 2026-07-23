@@ -105,15 +105,34 @@ jobs:
       - name: Check versions match
         run: pnpm run version:check
 
-      - name: Apple signing status
+      # Only export APPLE_* when configured. Empty strings still make Tauri try
+      # `security import` and fail the macOS bundle step.
+      - name: Enable Apple signing when configured
         if: matrix.platform == 'macos-latest'
+        env:
+          CERT: ${{ secrets.APPLE_CERTIFICATE }}
+          CERT_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID_VALUE: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD_VALUE: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID_VALUE: ${{ secrets.APPLE_TEAM_ID }}
         shell: bash
         run: |
-          if [ -n "${{ secrets.APPLE_CERTIFICATE }}" ] && [ -n "${{ secrets.APPLE_ID }}" ]; then
-            echo "Apple Developer ID secrets present — signing + notarization enabled."
-          else
-            echo "Apple Developer ID secrets missing — ad-hoc macOS signing (Gatekeeper workaround in release notes)."
+          if [ -z "$CERT" ] || [ -z "$APPLE_ID_VALUE" ]; then
+            echo "Apple Developer ID secrets missing — ad-hoc macOS signing."
+            exit 0
           fi
+          {
+            echo "APPLE_CERTIFICATE<<CERT_EOF"
+            echo "$CERT"
+            echo "CERT_EOF"
+            echo "APPLE_CERTIFICATE_PASSWORD=$CERT_PASSWORD"
+            echo "APPLE_SIGNING_IDENTITY=$IDENTITY"
+            echo "APPLE_ID=$APPLE_ID_VALUE"
+            echo "APPLE_PASSWORD=$APPLE_PASSWORD_VALUE"
+            echo "APPLE_TEAM_ID=$APPLE_TEAM_ID_VALUE"
+          } >> "$GITHUB_ENV"
+          echo "Apple Developer ID secrets present — signing + notarization enabled."
 
       - name: Build and upload to GitHub Release
         uses: tauri-apps/tauri-action@v0
@@ -122,13 +141,6 @@ jobs:
           # Updater artifact signatures (minisign). Required for in-app updates.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # Optional Apple Developer ID + notarization (macOS only; ignored when empty).
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           tagName: ${{ steps.tag.outputs.name }}
           releaseName: Prompton ${{ steps.tag.outputs.name }}
