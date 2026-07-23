@@ -5,7 +5,7 @@ type PromptonMarkIconProps = {
 };
 
 /**
- * Prompton mark: database cylinder + prompt caret.
+ * Prompton mark: database cylinder + terminal prompt (`>` + cursor).
  * Uses currentColor so it follows the surrounding chrome.
  */
 export function PromptonMarkIcon({ className }: PromptonMarkIconProps) {
@@ -17,39 +17,41 @@ export function PromptonMarkIcon({ className }: PromptonMarkIconProps) {
       className={cn("size-3.5", className)}
       aria-hidden
     >
-      {/* Cylinder */}
+      {/* Cylinder — left half */}
       <ellipse
-        cx="9"
-        cy="6.5"
-        rx="5"
-        ry="2.2"
+        cx="8"
+        cy="6.25"
+        rx="4.25"
+        ry="1.9"
         stroke="currentColor"
-        strokeWidth="1.75"
+        strokeWidth="1.6"
       />
       <path
-        d="M4 6.5v8.5c0 1.2 2.2 2.2 5 2.2s5-1 5-2.2V6.5"
+        d="M3.75 6.25v9c0 1.05 1.9 1.9 4.25 1.9s4.25-.85 4.25-1.9v-9"
         stroke="currentColor"
-        strokeWidth="1.75"
+        strokeWidth="1.6"
         strokeLinejoin="round"
       />
       <path
-        d="M4 11c0 1.2 2.2 2.2 5 2.2s5-1 5-2.2"
+        d="M3.75 10.75c0 1.05 1.9 1.9 4.25 1.9s4.25-.85 4.25-1.9"
         stroke="currentColor"
-        strokeWidth="1.75"
+        strokeWidth="1.6"
       />
-      {/* Prompt caret */}
+      {/* Prompt: chevron, then cursor block (clear gap from cylinder) */}
       <path
-        d="M15.5 9.5 19 12.5 15.5 15.5"
+        d="M14.25 9.25 17.5 12 14.25 14.75"
         stroke="currentColor"
-        strokeWidth="1.75"
+        strokeWidth="1.7"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <path
-        d="M19 12.5h2.5"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
+      <rect
+        x="19"
+        y="10.35"
+        width="1.65"
+        height="3.3"
+        rx="0.35"
+        fill="currentColor"
       />
     </svg>
   );
