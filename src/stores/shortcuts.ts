@@ -20,8 +20,8 @@ export type ShortcutDef = {
 export const SHORTCUT_DEFS: ShortcutDef[] = [
   {
     id: "toggleArtifact",
-    title: "Toggle artifact pane",
-    description: "Show or hide Results / SQL / Schema.",
+    title: "Toggle viewer",
+    description: "Show or hide Results, SQL, Schema, and related views.",
   },
   {
     id: "openSettings",

@@ -1,6 +1,6 @@
 import {
   BookMarked,
-  Database,
+  Columns2,
   History,
   type LucideIcon,
   Settings,
@@ -17,7 +17,8 @@ const TABS: Array<{
   icon: LucideIcon;
   label: string;
 }> = [
-  { id: "workspace", icon: Database, label: "Workspace" },
+  // Columns2 = three-pane workspace; Database is reserved for the brand mark.
+  { id: "workspace", icon: Columns2, label: "Workspace" },
   { id: "history", icon: History, label: "History" },
   { id: "library", icon: BookMarked, label: "Library" },
   { id: "settings", icon: Settings, label: "Settings" },

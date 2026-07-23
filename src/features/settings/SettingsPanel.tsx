@@ -445,7 +445,7 @@ export function SettingsPanel() {
                   variant="secondary"
                   onClick={() => openArtifact("context")}
                 >
-                  Open Context artifact
+                  Open Context viewer
                 </Button>
               </div>
             </SettingSection>
@@ -463,7 +463,7 @@ export function SettingsPanel() {
             tips={[
               {
                 title: "Context is inspectable",
-                body: "Open the Context artifact after an assistant turn to see what was sent.",
+                body: "Open the Context viewer after an assistant turn to see what was sent.",
               },
               {
                 title: "Production stays locked",

@@ -38,7 +38,7 @@ const SWITCHABLE: ReadonlyArray<{
   { kind: "context", label: "Context", icon: Braces },
 ];
 
-/** Artifact inspector: underline tabs + switchable Results/Chart/SQL/Schema/Explain/Context. */
+/** Viewer pane: underline tabs for Results/Chart/SQL/Schema/Explain/Context. */
 export function ArtifactPane() {
   const { state: artifact } = useArtifact();
   if (!artifact.open) return null;
@@ -79,7 +79,7 @@ function OpenArtifactPane() {
           size="icon-xs"
           className="my-1 shrink-0 rounded-none"
           onClick={close}
-          aria-label="Close artifact pane"
+          aria-label="Close viewer"
         >
           <X className="size-3.5" />
         </Button>

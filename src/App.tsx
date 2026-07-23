@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { PanelRightClose, PanelRightOpen, Plug } from "lucide-react";
+import { AppWindow, Plug } from "lucide-react";
 
 import {
   ActivityRail,
@@ -174,7 +174,7 @@ function AppShell() {
             className="flex h-10 shrink-0 items-center justify-between gap-3 border-b border-border/60 px-3 select-none"
           >
             <div className="flex min-w-0 items-center gap-2.5">
-              <span className="truncate text-[12px] font-medium tracking-tight text-muted-foreground">
+              <span className="truncate text-[12px] tracking-tight text-muted-foreground">
                 {PRODUCT_TAGLINE}
               </span>
               {activity === "workspace" && active && (
@@ -232,22 +232,21 @@ function AppShell() {
                   <TooltipTrigger asChild>
                     <Button
                       size="icon-sm"
-                      variant="ghost"
+                      variant={artifact.open ? "secondary" : "ghost"}
                       className="rounded-md"
                       onClick={() => toggle()}
                       aria-label={
-                        artifact.open ? "Hide artifact" : "Show artifact"
+                        artifact.open ? "Hide viewer" : "Show viewer"
                       }
+                      aria-pressed={artifact.open}
                     >
-                      {artifact.open ? (
-                        <PanelRightClose className="size-4" />
-                      ) : (
-                        <PanelRightOpen className="size-4" />
-                      )}
+                      <AppWindow className="size-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
-                    {artifact.open ? "Hide artifact" : "Show artifact"}
+                    {artifact.open
+                      ? "Hide viewer (Results, SQL, Schema)"
+                      : "Show viewer (Results, SQL, Schema)"}
                   </TooltipContent>
                 </Tooltip>
               )}
