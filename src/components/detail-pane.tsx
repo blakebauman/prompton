@@ -38,7 +38,7 @@ export function DetailPaneHeader({
   return (
     <div
       className={cn(
-        "absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 px-4 pt-3",
+        "absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 px-3 pt-2.5",
         className,
       )}
     >
@@ -57,7 +57,7 @@ export function DetailPaneTitle({
   return (
     <h2
       className={cn(
-        "truncate text-base font-bold tracking-tight",
+        "truncate text-sm font-semibold tracking-tight",
         className,
       )}
     >
@@ -74,7 +74,7 @@ export function DetailPaneMeta({
   children: ReactNode;
 }) {
   return (
-    <p className={cn("text-[11px] text-muted-foreground", className)}>
+    <p className={cn("text-[11px] leading-snug text-muted-foreground", className)}>
       {children}
     </p>
   );
@@ -88,7 +88,7 @@ export function DetailPaneActions({
   children: ReactNode;
 }) {
   return (
-    <div className={cn("flex shrink-0 items-center gap-1", className)}>
+    <div className={cn("flex shrink-0 items-center gap-0.5", className)}>
       {children}
     </div>
   );
@@ -121,15 +121,15 @@ export function DetailPaneScroll({
     <>
       <div
         className={cn(
-          "edge-fade-top pointer-events-none absolute inset-x-0 top-0 z-10 h-16 transition-opacity duration-200",
+          "edge-fade-top pointer-events-none absolute inset-x-0 top-0 z-10 h-12 transition-opacity duration-200",
           scrolled ? "opacity-100" : "opacity-0",
         )}
       />
       <div
         ref={ref}
         className={cn(
-          "h-full overflow-y-auto overflow-x-hidden px-4 pb-8",
-          padTop && "pt-16",
+          "h-full overflow-y-auto overflow-x-hidden px-3 pb-5",
+          padTop && "pt-14",
           className,
         )}
         onScroll={onScroll}

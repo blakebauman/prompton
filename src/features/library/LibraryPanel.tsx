@@ -538,7 +538,7 @@ export function LibraryPanel({
                 </Button>
               </DetailPaneActions>
             </DetailPaneHeader>
-            <DetailPaneScroll className="space-y-3">
+            <DetailPaneScroll className="space-y-2">
               {tab === "skills" ? (
                 <>
                   <Input
@@ -548,7 +548,7 @@ export function LibraryPanel({
                       setDirty(true);
                     }}
                     placeholder="Short description"
-                    className="text-sm"
+                    className="h-8 text-sm"
                   />
                   <Textarea
                     value={skillBody}
@@ -557,7 +557,7 @@ export function LibraryPanel({
                       setDirty(true);
                     }}
                     placeholder="Skill body (markdown)"
-                    className="min-h-[280px] font-mono text-xs leading-relaxed"
+                    className="min-h-[240px] font-mono text-xs leading-relaxed"
                   />
                 </>
               ) : (
@@ -569,7 +569,7 @@ export function LibraryPanel({
                       setDirty(true);
                     }}
                     placeholder="Title"
-                    className="text-sm"
+                    className="h-8 text-sm"
                   />
                   <Textarea
                     value={promptBody}
@@ -578,7 +578,7 @@ export function LibraryPanel({
                       setDirty(true);
                     }}
                     placeholder="Prompt body"
-                    className="min-h-[280px] text-sm leading-relaxed"
+                    className="min-h-[240px] text-sm leading-relaxed"
                   />
                 </>
               )}

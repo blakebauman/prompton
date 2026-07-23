@@ -619,15 +619,15 @@ export function HistoryPanel({
                 </Button>
               </DetailPaneActions>
             </DetailPaneHeader>
-            <DetailPaneScroll className="space-y-4">
+            <DetailPaneScroll className="space-y-2.5">
               <ExpandableClamp maxHeight={240}>
-                <pre className="whitespace-pre-wrap rounded-md border border-border/50 bg-muted/25 p-4 font-mono text-xs leading-relaxed text-muted-foreground">
+                <pre className="whitespace-pre-wrap rounded-md border border-border/50 bg-muted/25 p-2.5 font-mono text-xs leading-relaxed text-muted-foreground">
                   {selected.body}
                 </pre>
               </ExpandableClamp>
               {selected.detail && (
                 <div>
-                  <h3 className="mb-2 text-xs font-medium text-muted-foreground">
+                  <h3 className="mb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
                     {statusTone(selected.status) === "error"
                       ? "Error"
                       : "Response"}
@@ -635,7 +635,7 @@ export function HistoryPanel({
                   <ExpandableClamp maxHeight={280}>
                     <pre
                       className={cn(
-                        "whitespace-pre-wrap rounded-md border border-border/50 bg-muted/15 p-4 text-xs leading-relaxed",
+                        "whitespace-pre-wrap rounded-md border border-border/50 bg-muted/15 p-2.5 text-xs leading-relaxed",
                         statusTone(selected.status) === "error" &&
                           "text-destructive",
                       )}
