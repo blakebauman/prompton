@@ -31,6 +31,11 @@ interface WorkspaceState {
   setResult: (r: QueryPage | null) => void;
   setRunning: (v: boolean) => void;
   addMessage: (m: ChatMessage) => void;
+  patchMessage: (id: string, patch: Partial<ChatMessage>) => void;
+  /** Mark in-flight tool cards as cancelled / errored. */
+  finalizeRunningTools: (
+    toolState: NonNullable<ChatMessage["toolState"]>,
+  ) => void;
   appendAssistant: (delta: string) => void;
   setMessages: (m: ChatMessage[]) => void;
   setSessionId: (id: string | null) => void;
@@ -73,6 +78,20 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
   setResult: (result) => set({ result }),
   setRunning: (running) => set({ running }),
   addMessage: (m) => set((s) => ({ messages: [...s.messages, m] })),
+  patchMessage: (id, patch) =>
+    set((s) => ({
+      messages: s.messages.map((m) => (m.id === id ? { ...m, ...patch } : m)),
+    })),
+  finalizeRunningTools: (toolState) =>
+    set((s) => ({
+      messages: s.messages.map((m) =>
+        m.role === "tool" &&
+        (m.toolState === "input-available" ||
+          m.toolState === "input-streaming")
+          ? { ...m, toolState }
+          : m,
+      ),
+    })),
   appendAssistant: (delta) =>
     set((s) => {
       const msgs = [...s.messages];

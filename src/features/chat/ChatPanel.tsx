@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   Copy,
   DatabaseIcon,
+  FileCode2,
   Lock,
   MessageSquarePlus,
   Server,
@@ -66,6 +67,8 @@ export function ChatPanel({
   const {
     messages,
     addMessage,
+    patchMessage,
+    finalizeRunningTools,
     appendAssistant,
     activeConnId,
     connections,
@@ -127,14 +130,29 @@ export function ChatPanel({
           result: string;
         }>("agent:tool_result", (p) => {
           if (!isCurrentAgentSession(p.sessionId)) return;
-          addMessage({
-            id: `tool-${Date.now()}`,
-            role: "tool",
-            toolName: p.name,
-            content: p.result,
-            toolState: "output-available",
-          });
-          if (p.name === "explain_query" && p.result) {
+          const toolState = p.result.trim().startsWith("Error:")
+            ? ("output-error" as const)
+            : ("output-available" as const);
+          const id = p.id ? `tool-${p.id}` : null;
+          const existing = id
+            ? useWorkspace.getState().messages.find((m) => m.id === id)
+            : null;
+          if (existing) {
+            patchMessage(existing.id, {
+              content: p.result,
+              toolState,
+              toolName: p.name,
+            });
+          } else {
+            addMessage({
+              id: id ?? `tool-${Date.now()}`,
+              role: "tool",
+              toolName: p.name,
+              content: p.result,
+              toolState,
+            });
+          }
+          if (p.name === "explain_query" && p.result && toolState !== "output-error") {
             useWorkspace.getState().setExplainPlan(p.result);
           }
         }),
@@ -147,15 +165,16 @@ export function ChatPanel({
           arguments: string;
         }>("agent:tool_call", (p) => {
           if (!isCurrentAgentSession(p.sessionId)) return;
+          const id = p.id ? `tool-${p.id}` : `call-${Date.now()}`;
           addMessage({
-            id: `call-${Date.now()}`,
+            id,
             role: "tool",
             toolName: p.name,
             content: "",
             toolArgs: p.arguments,
             toolState: "input-available",
           });
-          if (p.name === "run_query") {
+          if (p.name === "run_query" || p.name === "sample_rows") {
             try {
               const args = JSON.parse(p.arguments) as { sql?: string };
               if (args.sql) {
@@ -165,7 +184,7 @@ export function ChatPanel({
             } catch {
               /* ignore */
             }
-          } else if (p.name === "inspect_schema") {
+          } else if (p.name === "inspect_schema" || p.name === "list_tables") {
             openArtifact("schema");
           } else if (p.name === "explain_query") {
             openArtifact("explain");
@@ -222,9 +241,11 @@ export function ChatPanel({
             if (!isCurrentAgentSession(p.sessionId)) return;
             setAgentBusy(false);
             if (p.error === "Cancelled") {
+              finalizeRunningTools("output-denied");
               setStatus("Agent cancelled");
               return;
             }
+            finalizeRunningTools("output-error");
             addMessage({
               id: `err-${Date.now()}`,
               role: "assistant",
@@ -263,7 +284,9 @@ export function ChatPanel({
   }, [
     addMessage,
     appendAssistant,
+    finalizeRunningTools,
     openArtifact,
+    patchMessage,
     setAgentBusy,
     setContextReport,
     setPendingConfirm,
@@ -305,6 +328,22 @@ export function ChatPanel({
     messages.length <= 1 &&
     messages[0]?.id === "welcome" &&
     !messages[0]?.content.includes("reset");
+  const showWorkingPlaceholder =
+    agentBusy &&
+    !messages.some(
+      (m) =>
+        (m.role === "assistant" && m.id.startsWith("stream-")) ||
+        (m.role === "tool" &&
+          (m.toolState === "input-available" ||
+            m.toolState === "input-streaming")),
+    );
+
+  function stopAgent() {
+    if (sessionId) void api.agentCancel(sessionId);
+    finalizeRunningTools("output-denied");
+    setAgentBusy(false);
+    setStatus("Agent cancelled");
+  }
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden">
@@ -316,14 +355,7 @@ export function ChatPanel({
         </div>
         <div className="pointer-events-auto flex items-center gap-0.5">
           {agentBusy && (
-            <Button
-              size="xs"
-              variant="ghost"
-              onClick={() => {
-                if (sessionId) void api.agentCancel(sessionId);
-                setAgentBusy(false);
-              }}
-            >
+            <Button size="xs" variant="ghost" onClick={stopAgent}>
               <SquareIcon className="size-3.5" />
               Stop
             </Button>
@@ -401,9 +433,11 @@ export function ChatPanel({
               description="Natural language or SQL. The agent keeps context small and inspectable."
             />
           ) : (
-            messages.map((m) => <ChatBubble key={m.id} message={m} />)
+            messages.map((m) => (
+              <ChatBubble key={m.id} message={m} streaming={agentBusy} />
+            ))
           )}
-          {agentBusy && (
+          {showWorkingPlaceholder && (
             <Message from="assistant">
               <MessageContent>
                 <Shimmer>Working…</Shimmer>
@@ -463,12 +497,14 @@ export function ChatPanel({
             </span>
             <PromptInputSubmit
               status={status}
-              disabled={!activeConnId || !input.trim() || agentBusy}
+              disabled={
+                !activeConnId ||
+                (status !== "streaming" && (!input.trim() || agentBusy))
+              }
               onClick={(e) => {
                 if (status === "streaming") {
                   e.preventDefault();
-                  if (sessionId) void api.agentCancel(sessionId);
-                  setAgentBusy(false);
+                  stopAgent();
                 }
               }}
             />
@@ -502,8 +538,15 @@ export function ChatPanel({
   );
 }
 
-function ChatBubble({ message }: { message: ChatMessage }) {
+function ChatBubble({
+  message,
+  streaming,
+}: {
+  message: ChatMessage;
+  streaming?: boolean;
+}) {
   const { open: openArtifact } = useArtifact();
+  const setSql = useWorkspace((s) => s.setSql);
 
   // Safety net: hide assistant bubbles that are only tool-call JSON.
   if (
@@ -525,19 +568,22 @@ function ChatBubble({ message }: { message: ChatMessage }) {
       input = message.toolArgs;
     }
     const artifactKind = artifactKindForTool(message.toolName);
-    const sqlSubtitle =
+    const sql =
       input &&
       typeof input === "object" &&
       input !== null &&
       "sql" in input &&
       typeof (input as { sql?: unknown }).sql === "string"
-        ? (input as { sql: string }).sql.trim().replace(/\s+/g, " ")
+        ? (input as { sql: string }).sql
         : undefined;
+    const sqlSubtitle = sql?.trim().replace(/\s+/g, " ");
     const ArtifactIcon = artifactKind
       ? artifactActionIcon(artifactKind)
       : null;
     const running =
       state === "input-available" || state === "input-streaming";
+    const done = state === "output-available";
+
     return (
       <Tool defaultOpen={running || state === "output-error"}>
         <ToolHeader
@@ -556,16 +602,47 @@ function ChatBubble({ message }: { message: ChatMessage }) {
               }
             />
           )}
-          {artifactKind && state === "output-available" && ArtifactIcon && (
-            <Button
-              size="xs"
-              variant="outline"
-              onClick={() => openArtifact(artifactKind)}
-            >
-              <ArtifactIcon className="size-3.5" />
-              Open {artifactKind}
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-1">
+            {sql && (
+              <>
+                <Button
+                  size="xs"
+                  variant="outline"
+                  onClick={() => {
+                    setSql(sql);
+                    openArtifact("sql");
+                  }}
+                >
+                  <FileCode2 className="size-3.5" />
+                  Open SQL
+                </Button>
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(sql).then(
+                      () => toast({ title: "SQL copied", tone: "success" }),
+                      () =>
+                        toast({ title: "Couldn’t copy", tone: "error" }),
+                    );
+                  }}
+                >
+                  <Copy className="size-3.5" />
+                  Copy SQL
+                </Button>
+              </>
+            )}
+            {artifactKind && done && ArtifactIcon && (
+              <Button
+                size="xs"
+                variant="outline"
+                onClick={() => openArtifact(artifactKind)}
+              >
+                <ArtifactIcon className="size-3.5" />
+                Open {artifactKind}
+              </Button>
+            )}
+          </div>
         </ToolContent>
       </Tool>
     );
@@ -581,6 +658,10 @@ function ChatBubble({ message }: { message: ChatMessage }) {
 
   const from = message.role === "user" ? "user" : "assistant";
   const canCopy = message.content.trim().length > 0;
+  const showCaret =
+    streaming &&
+    from === "assistant" &&
+    message.id.startsWith("stream-");
 
   async function copyMessage() {
     try {
@@ -601,12 +682,20 @@ function ChatBubble({ message }: { message: ChatMessage }) {
         }
       >
         {from === "assistant" ? (
-          <MessageResponse>{message.content}</MessageResponse>
+          <div className="relative">
+            <MessageResponse>{message.content}</MessageResponse>
+            {showCaret && (
+              <span
+                aria-hidden
+                className="ml-0.5 inline-block h-3.5 w-1 translate-y-0.5 bg-foreground/70 animate-pulse"
+              />
+            )}
+          </div>
         ) : (
           <div className="whitespace-pre-wrap">{message.content}</div>
         )}
       </MessageContent>
-      {canCopy && (
+      {canCopy && !showCaret && (
         <MessageActions
           className={
             from === "user"
