@@ -6,6 +6,7 @@ import {
   Settings,
 } from "lucide-react";
 
+import { DragRegion } from "@/components/titlebar-drag-region";
 import { cn } from "@/lib/utils";
 
 export type ActivityId = "workspace" | "history" | "library" | "settings";
@@ -44,12 +45,12 @@ export function ActivityRail({
       )}
       aria-label="Primary"
     >
-      <div
-        className="mb-4 flex size-8 items-center justify-center rounded-md border border-border/60 bg-muted/40 text-[11px] font-bold tracking-tight text-foreground"
+      <DragRegion
+        className="mb-4 flex size-8 items-center justify-center rounded-md border border-border/60 bg-muted/40 text-[11px] font-bold tracking-tight text-foreground select-none"
         aria-hidden
       >
         P
-      </div>
+      </DragRegion>
 
       <div className="flex flex-col gap-2.5">
         {TABS.map((tab) => {

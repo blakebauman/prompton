@@ -70,9 +70,7 @@ export function ChatPanel({
   const {
     messages,
     addMessage,
-    patchMessage,
     finalizeRunningTools,
-    appendAssistant,
     activeConnId,
     connections,
     sessionId,
@@ -82,7 +80,6 @@ export function ChatPanel({
     pendingConfirm,
     setPendingConfirm,
     setResult,
-    setContextReport,
     setStatus,
     setSql,
     setConnections,
@@ -132,206 +129,211 @@ export function ChatPanel({
   }
 
   useEffect(() => {
+    // Async listen setup races with Strict Mode remount: cleanup can run
+    // before unlisten fns exist, leaving orphan handlers that double-apply
+    // every agent:delta (duplicated assistant text without a second LLM call).
+    let cancelled = false;
     const unsubs: Array<() => void> = [];
+
+    async function subscribe<T>(
+      event: string,
+      handler: (payload: T) => void,
+    ) {
+      const unlisten = await onEvent<T>(event, handler);
+      if (cancelled) {
+        unlisten();
+        return;
+      }
+      unsubs.push(unlisten);
+    }
+
     void (async () => {
-      unsubs.push(
-        await onEvent<{ sessionId: string; delta: string }>(
-          "agent:delta",
-          (p) => {
-            if (!isCurrentAgentSession(p.sessionId)) return;
-            appendAssistant(p.delta);
-          },
-        ),
-      );
-      unsubs.push(
-        await onEvent<{
-          sessionId: string;
-          id?: string;
-          name: string;
-          result: string;
-        }>("agent:tool_result", (p) => {
+      await subscribe<{ sessionId: string; delta: string }>(
+        "agent:delta",
+        (p) => {
           if (!isCurrentAgentSession(p.sessionId)) return;
-          const toolState = p.result.trim().startsWith("Error:")
-            ? ("output-error" as const)
-            : ("output-available" as const);
-          const id = p.id ? `tool-${p.id}` : null;
-          const existing = id
-            ? useWorkspace.getState().messages.find((m) => m.id === id)
-            : null;
-          if (existing) {
-            patchMessage(existing.id, {
-              content: p.result,
-              toolState,
-              toolName: p.name,
-            });
-          } else {
-            addMessage({
-              id: id ?? `tool-${Date.now()}`,
-              role: "tool",
-              toolName: p.name,
-              content: p.result,
-              toolState,
-            });
-          }
-          if (p.name === "explain_query" && p.result && toolState !== "output-error") {
-            useWorkspace.getState().setExplainPlan(p.result);
-          }
-        }),
+          useWorkspace.getState().appendAssistant(p.delta);
+        },
       );
-      unsubs.push(
-        await onEvent<{
-          sessionId: string;
-          id?: string;
-          name: string;
-          arguments: string;
-        }>("agent:tool_call", (p) => {
-          if (!isCurrentAgentSession(p.sessionId)) return;
-          const id = p.id ? `tool-${p.id}` : `call-${Date.now()}`;
-          addMessage({
-            id,
+      await subscribe<{
+        sessionId: string;
+        id?: string;
+        name: string;
+        result: string;
+      }>("agent:tool_result", (p) => {
+        if (!isCurrentAgentSession(p.sessionId)) return;
+        const ws = useWorkspace.getState();
+        const toolState = p.result.trim().startsWith("Error:")
+          ? ("output-error" as const)
+          : ("output-available" as const);
+        const id = p.id ? `tool-${p.id}` : null;
+        const existing = id
+          ? ws.messages.find((m) => m.id === id)
+          : null;
+        if (existing) {
+          ws.patchMessage(existing.id, {
+            content: p.result,
+            toolState,
+            toolName: p.name,
+          });
+        } else {
+          ws.addMessage({
+            id: id ?? `tool-${Date.now()}`,
             role: "tool",
             toolName: p.name,
-            content: "",
-            toolArgs: p.arguments,
-            toolState: "input-available",
+            content: p.result,
+            toolState,
           });
-          if (p.name === "run_query" || p.name === "sample_rows") {
-            try {
-              const args = JSON.parse(p.arguments) as { sql?: string };
-              if (args.sql) {
-                setSql(args.sql);
-                openArtifact("sql");
-              }
-            } catch {
-              /* ignore */
+        }
+        if (
+          p.name === "explain_query" &&
+          p.result &&
+          toolState !== "output-error"
+        ) {
+          ws.setExplainPlan(p.result);
+        }
+      });
+      await subscribe<{
+        sessionId: string;
+        id?: string;
+        name: string;
+        arguments: string;
+      }>("agent:tool_call", (p) => {
+        if (!isCurrentAgentSession(p.sessionId)) return;
+        const ws = useWorkspace.getState();
+        const id = p.id ? `tool-${p.id}` : `call-${Date.now()}`;
+        ws.addMessage({
+          id,
+          role: "tool",
+          toolName: p.name,
+          content: "",
+          toolArgs: p.arguments,
+          toolState: "input-available",
+        });
+        if (p.name === "run_query" || p.name === "sample_rows") {
+          try {
+            const args = JSON.parse(p.arguments) as { sql?: string };
+            if (args.sql) {
+              ws.setSql(args.sql);
+              openArtifact("sql");
             }
-          } else if (p.name === "inspect_schema" || p.name === "list_tables") {
-            openArtifact("schema");
-          } else if (p.name === "explain_query") {
-            openArtifact("explain");
+          } catch {
+            /* ignore */
           }
-        }),
-      );
-      unsubs.push(
-        await onEvent<PendingConfirmation>("agent:confirm", (p) => {
-          const active = useWorkspace.getState().activeConnId;
-          if (p.connId && active && p.connId !== active) return;
-          if (p.sessionId && !isCurrentAgentSession(p.sessionId)) return;
-          setPendingConfirm(p);
-        }),
-      );
-      unsubs.push(
-        await onEvent<{ sessionId: string }>("agent:done", async (p) => {
-          if (!isCurrentAgentSession(p.sessionId)) return;
-          setAgentBusy(false);
-          setStatus("Agent idle");
-          if (p.sessionId) {
-            const report = await api.agentLastContext(p.sessionId);
-            setContextReport(report);
-          }
-          const msgs = useWorkspace.getState().messages;
-          const lastUser = [...msgs].reverse().find((m) => m.role === "user");
-          const lastAssistant = [...msgs]
-            .reverse()
-            .find((m) => m.role === "assistant" && m.id !== "welcome");
-          if (lastUser) {
-            const conn = useWorkspace
-              .getState()
-              .connections.find(
-                (c) => c.id === useWorkspace.getState().activeConnId,
-              );
-            void api
-              .recordHistory({
-                kind: "agent",
-                title: lastUser.content,
-                body: lastUser.content,
-                detail: lastAssistant?.content ?? null,
-                connId: conn?.id ?? null,
-                connName: conn?.name ?? null,
-                status: "ok",
-                meta: p.sessionId ? { sessionId: p.sessionId } : null,
-              })
-              .catch(() => {});
-          }
-        }),
-      );
-      unsubs.push(
-        await onEvent<{ sessionId: string; error: string }>(
-          "agent:error",
-          (p) => {
-            if (!isCurrentAgentSession(p.sessionId)) return;
-            setAgentBusy(false);
-            if (p.error === "Cancelled") {
-              finalizeRunningTools("output-denied");
-              setStatus("Agent cancelled");
-              return;
-            }
-            finalizeRunningTools("output-error");
-            addMessage({
-              id: `err-${Date.now()}`,
-              role: "assistant",
-              content: `Error: ${p.error}`,
-            });
-            setStatus(p.error);
-            const s = useWorkspace.getState();
-            const conn = s.connections.find((c) => c.id === s.activeConnId);
-            const lastUser = [...s.messages]
-              .reverse()
-              .find((m) => m.role === "user");
-            void api
-              .recordHistory({
-                kind: "agent",
-                title: lastUser?.content ?? "Agent error",
-                body: lastUser?.content ?? p.error,
-                detail: p.error,
-                connId: conn?.id ?? null,
-                connName: conn?.name ?? null,
-                status: "error",
-                meta: { sessionId: p.sessionId },
-              })
-              .catch(() => {});
-          },
-        ),
-      );
-      unsubs.push(
-        await onEvent<QueryPage>("query:result", (page) => {
-          // Agent-only event; ignore leftovers after connection switch.
-          const s = useWorkspace.getState();
-          if (!s.agentBusy && !s.sessionId) return;
-          setResult(page);
-          openArtifact("results");
-          const conn = s.connections.find((c) => c.id === s.activeConnId);
+        } else if (p.name === "inspect_schema" || p.name === "list_tables") {
+          openArtifact("schema");
+        } else if (p.name === "explain_query") {
+          openArtifact("explain");
+        }
+      });
+      await subscribe<PendingConfirmation>("agent:confirm", (p) => {
+        const ws = useWorkspace.getState();
+        if (p.connId && ws.activeConnId && p.connId !== ws.activeConnId) {
+          return;
+        }
+        if (p.sessionId && !isCurrentAgentSession(p.sessionId)) return;
+        ws.setPendingConfirm(p);
+      });
+      await subscribe<{ sessionId: string }>("agent:done", async (p) => {
+        if (!isCurrentAgentSession(p.sessionId)) return;
+        const ws = useWorkspace.getState();
+        ws.setAgentBusy(false);
+        ws.setStatus("Agent idle");
+        if (p.sessionId) {
+          const report = await api.agentLastContext(p.sessionId);
+          if (cancelled || !isCurrentAgentSession(p.sessionId)) return;
+          useWorkspace.getState().setContextReport(report);
+        }
+        const msgs = useWorkspace.getState().messages;
+        const lastUser = [...msgs].reverse().find((m) => m.role === "user");
+        const lastAssistant = [...msgs]
+          .reverse()
+          .find((m) => m.role === "assistant" && m.id !== "welcome");
+        if (lastUser) {
+          const conn = useWorkspace
+            .getState()
+            .connections.find(
+              (c) => c.id === useWorkspace.getState().activeConnId,
+            );
           void api
             .recordHistory({
-              kind: "query",
-              title: page.sql.trim().split("\n")[0] ?? "Query",
-              body: page.sql,
+              kind: "agent",
+              title: lastUser.content,
+              body: lastUser.content,
+              detail: lastAssistant?.content ?? null,
               connId: conn?.id ?? null,
               connName: conn?.name ?? null,
               status: "ok",
-              meta: {
-                totalRows: page.totalRows,
-                durationMs: page.durationMs,
-              },
+              meta: p.sessionId ? { sessionId: p.sessionId } : null,
             })
             .catch(() => {});
-        }),
+        }
+      });
+      await subscribe<{ sessionId: string; error: string }>(
+        "agent:error",
+        (p) => {
+          if (!isCurrentAgentSession(p.sessionId)) return;
+          const ws = useWorkspace.getState();
+          ws.setAgentBusy(false);
+          if (p.error === "Cancelled") {
+            ws.finalizeRunningTools("output-denied");
+            ws.setStatus("Agent cancelled");
+            return;
+          }
+          ws.finalizeRunningTools("output-error");
+          ws.addMessage({
+            id: `err-${Date.now()}`,
+            role: "assistant",
+            content: `Error: ${p.error}`,
+          });
+          ws.setStatus(p.error);
+          const conn = ws.connections.find((c) => c.id === ws.activeConnId);
+          const lastUser = [...ws.messages]
+            .reverse()
+            .find((m) => m.role === "user");
+          void api
+            .recordHistory({
+              kind: "agent",
+              title: lastUser?.content ?? "Agent error",
+              body: lastUser?.content ?? p.error,
+              detail: p.error,
+              connId: conn?.id ?? null,
+              connName: conn?.name ?? null,
+              status: "error",
+              meta: { sessionId: p.sessionId },
+            })
+            .catch(() => {});
+        },
       );
+      await subscribe<QueryPage>("query:result", (page) => {
+        // Agent-only event; ignore leftovers after connection switch.
+        const s = useWorkspace.getState();
+        if (!s.agentBusy && !s.sessionId) return;
+        s.setResult(page);
+        openArtifact("results");
+        const conn = s.connections.find((c) => c.id === s.activeConnId);
+        void api
+          .recordHistory({
+            kind: "query",
+            title: page.sql.trim().split("\n")[0] ?? "Query",
+            body: page.sql,
+            connId: conn?.id ?? null,
+            connName: conn?.name ?? null,
+            status: "ok",
+            meta: {
+              totalRows: page.totalRows,
+              durationMs: page.durationMs,
+            },
+          })
+          .catch(() => {});
+      });
     })();
-    return () => unsubs.forEach((u) => u());
-  }, [
-    addMessage,
-    appendAssistant,
-    finalizeRunningTools,
-    openArtifact,
-    patchMessage,
-    setAgentBusy,
-    setContextReport,
-    setPendingConfirm,
-    setResult,
-    setSql,
-    setStatus,
-  ]);
+
+    return () => {
+      cancelled = true;
+      unsubs.forEach((u) => u());
+    };
+  }, [openArtifact]);
 
   async function send(textOverride?: string) {
     const text = (textOverride ?? input).trim();
@@ -511,8 +513,8 @@ export function ChatPanel({
             tone="prod"
             className="px-2.5 py-2"
             icon={<Lock className="size-3.5" />}
-            title="Production is read-only"
-            description="Mutations pause for approval until you unlock admin writes."
+            title="Production writes need approval"
+            description="Mutating SQL pauses for your approval. Admin unlock is not required."
           />
         )}
         {activeConnId && showEmpty && (

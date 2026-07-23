@@ -142,13 +142,22 @@ export function HistoryPanel({
   }, [refresh]);
 
   useEffect(() => {
+    let cancelled = false;
     let unlisten: (() => void) | undefined;
     void (async () => {
-      unlisten = await onEvent("history:updated", () => {
+      const u = await onEvent("history:updated", () => {
         void refresh();
       });
+      if (cancelled) {
+        u();
+        return;
+      }
+      unlisten = u;
     })();
-    return () => unlisten?.();
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
   }, [refresh]);
 
   useEffect(() => {

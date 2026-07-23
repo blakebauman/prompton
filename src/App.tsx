@@ -13,7 +13,10 @@ import { ArtifactPane } from "@/components/artifact/artifact-pane";
 import { ConnectionStatus } from "@/components/connection-status";
 import { ProdBadge } from "@/components/prod-badge";
 import { StatusPill, statusTone } from "@/components/status-pill";
-import { TitleBarDragRegion } from "@/components/titlebar-drag-region";
+import {
+  DragRegion,
+  TitleBarDragRegion,
+} from "@/components/titlebar-drag-region";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -165,7 +168,10 @@ function AppShell() {
         <ActivityRail active={activity} onSelect={setActivity} />
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <header className="flex h-10 shrink-0 items-center justify-between gap-3 border-b border-border/60 px-3">
+          <DragRegion
+            as="header"
+            className="flex h-10 shrink-0 items-center justify-between gap-3 border-b border-border/60 px-3 select-none"
+          >
             <div className="flex min-w-0 items-center gap-2.5">
               <span className="flex shrink-0 items-center gap-2">
                 <span
@@ -189,7 +195,9 @@ function AppShell() {
                       {active.name}
                     </span>
                     {active.isProduction && (
-                      <ProdBadge unlocked={!!active.adminWritesUnlocked} />
+                      <span className="tauri-no-drag">
+                        <ProdBadge unlocked={!!active.adminWritesUnlocked} />
+                      </span>
                     )}
                     {!active.connected && (
                       <Button
@@ -213,7 +221,7 @@ function AppShell() {
                   label={status}
                   tone={tone}
                   onDismiss={() => setStatus("Ready")}
-                  className="mr-0.5"
+                  className="tauri-no-drag mr-0.5"
                 />
               )}
               {activity === "workspace" && (
@@ -241,7 +249,7 @@ function AppShell() {
                 </Tooltip>
               )}
             </div>
-          </header>
+          </DragRegion>
 
           <div className="min-h-0 flex-1 overflow-hidden">
             {activity === "workspace" && (
