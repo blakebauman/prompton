@@ -124,6 +124,8 @@ export type ToolHeaderProps = {
   state: ToolState;
   toolName?: string;
   subtitle?: string;
+  /** Hover actions (icon buttons); clicks do not toggle the card. */
+  actions?: ReactNode;
   className?: string;
 };
 
@@ -133,16 +135,17 @@ export const ToolHeader = ({
   state,
   toolName,
   subtitle,
+  actions,
   ...props
 }: ToolHeaderProps) => (
   <CollapsibleTrigger
     className={cn(
-      "flex w-full items-center justify-between gap-2 px-2.5 py-2",
+      "flex w-full items-center justify-between gap-2 px-2 py-1.5",
       className,
     )}
     {...props}
   >
-    <div className="flex min-w-0 items-center gap-2">
+    <div className="flex min-w-0 items-center gap-1.5">
       {toolIcon(toolName ?? title)}
       <div className="min-w-0 text-left">
         <div className="flex min-w-0 items-center gap-1.5">
@@ -152,13 +155,24 @@ export const ToolHeader = ({
           {getStatusBadge(state)}
         </div>
         {subtitle && (
-          <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground/80">
+          <p className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground/80">
             {subtitle}
           </p>
         )}
       </div>
     </div>
-    <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+    <div className="flex shrink-0 items-center gap-0.5">
+      {actions ? (
+        <div
+          className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {actions}
+        </div>
+      ) : null}
+      <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+    </div>
   </CollapsibleTrigger>
 );
 
@@ -167,7 +181,7 @@ export type ToolContentProps = ComponentProps<typeof CollapsibleContent>;
 export const ToolContent = ({ className, ...props }: ToolContentProps) => (
   <CollapsibleContent
     className={cn(
-      "space-y-2.5 border-t border-border/50 px-2.5 pt-2 pb-2.5 text-popover-foreground",
+      "space-y-2 border-t border-border/50 px-2 pt-1.5 pb-2 text-popover-foreground",
       className,
     )}
     {...props}
@@ -189,16 +203,16 @@ export const ToolInput = ({ className, input, ...props }: ToolInputProps) => {
       : null;
 
   return (
-    <div className={cn("space-y-1.5 overflow-hidden", className)} {...props}>
+    <div className={cn("space-y-1 overflow-hidden", className)} {...props}>
       <h4 className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
         {sql ? "SQL" : "Parameters"}
       </h4>
       {sql ? (
-        <pre className="max-h-36 overflow-auto rounded-md border border-border/50 bg-background/60 p-2 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
+        <pre className="max-h-32 overflow-auto rounded-md border border-border/50 bg-background/60 px-2 py-1.5 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
           {sql}
         </pre>
       ) : (
-        <pre className="max-h-36 overflow-auto rounded-md border border-border/50 bg-background/60 p-2 font-mono text-[11px]">
+        <pre className="max-h-32 overflow-auto rounded-md border border-border/50 bg-background/60 px-2 py-1.5 font-mono text-[11px]">
           {typeof input === "string" ? input : JSON.stringify(input, null, 2)}
         </pre>
       )}
@@ -222,11 +236,11 @@ export const ToolOutput = ({
   // Prefer the error text alone — callers often pass the same string as both.
   if (errorText) {
     return (
-      <div className={cn("space-y-1.5", className)} {...props}>
+      <div className={cn("space-y-1", className)} {...props}>
         <h4 className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
           Error
         </h4>
-        <pre className="max-h-40 overflow-auto rounded-md border border-border/50 bg-background/60 p-2 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-destructive">
+        <pre className="max-h-36 overflow-auto rounded-md border border-border/50 bg-background/60 px-2 py-1.5 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-destructive">
           {errorText}
         </pre>
       </div>
@@ -236,20 +250,20 @@ export const ToolOutput = ({
   let body: ReactNode = <div>{output as ReactNode}</div>;
   if (typeof output === "object" && !isValidElement(output)) {
     body = (
-      <pre className="max-h-40 overflow-auto rounded-md border border-border/50 bg-background/60 p-2 font-mono text-[11px]">
+      <pre className="max-h-36 overflow-auto rounded-md border border-border/50 bg-background/60 px-2 py-1.5 font-mono text-[11px]">
         {JSON.stringify(output, null, 2)}
       </pre>
     );
   } else if (typeof output === "string") {
     body = (
-      <pre className="max-h-40 overflow-auto rounded-md border border-border/50 bg-background/60 p-2 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
+      <pre className="max-h-36 overflow-auto rounded-md border border-border/50 bg-background/60 px-2 py-1.5 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
         {output}
       </pre>
     );
   }
 
   return (
-    <div className={cn("space-y-1.5", className)} {...props}>
+    <div className={cn("space-y-1", className)} {...props}>
       <h4 className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
         Result
       </h4>

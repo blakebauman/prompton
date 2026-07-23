@@ -509,7 +509,7 @@ export function AssistantPanel({
       </div>
 
       <Conversation className="min-h-0">
-        <ConversationContent className="gap-3 px-4 pt-1 pb-4">
+        <ConversationContent className="gap-2 px-4 pt-1 pb-4">
           {!activeConnId ? (
             <div className="flex flex-1 items-center justify-center px-2 py-6">
               <SetupChecklist
@@ -791,6 +791,53 @@ function ChatBubble({
       state === "approval-responded";
     const done = state === "output-available";
 
+    const headerActions =
+      sql || (artifactKind && done && ArtifactIcon) ? (
+        <>
+          {sql ? (
+            <>
+              <Button
+                size="icon-xs"
+                variant="ghost"
+                title="Open SQL"
+                aria-label="Open SQL in editor"
+                onClick={() => {
+                  setSql(sql);
+                  openArtifact("sql");
+                }}
+              >
+                <FileCode2 className="size-3.5" />
+              </Button>
+              <Button
+                size="icon-xs"
+                variant="ghost"
+                title="Copy SQL"
+                aria-label="Copy SQL"
+                onClick={() => {
+                  void navigator.clipboard.writeText(sql).then(
+                    () => toast({ title: "SQL copied", tone: "success" }),
+                    () => toast({ title: "Couldn’t copy", tone: "error" }),
+                  );
+                }}
+              >
+                <Copy className="size-3.5" />
+              </Button>
+            </>
+          ) : null}
+          {artifactKind && done && ArtifactIcon ? (
+            <Button
+              size="icon-xs"
+              variant="ghost"
+              title={`Open ${artifactKind}`}
+              aria-label={`Open ${artifactKind}`}
+              onClick={() => openArtifact(artifactKind)}
+            >
+              <ArtifactIcon className="size-3.5" />
+            </Button>
+          ) : null}
+        </>
+      ) : undefined;
+
     return (
       <Tool defaultOpen={running || state === "output-error"}>
         <ToolHeader
@@ -798,15 +845,16 @@ function ChatBubble({
           toolName={message.toolName}
           state={state}
           subtitle={subtitle}
+          actions={headerActions}
         />
         <ToolContent>
           {input != null && input !== "" && <ToolInput input={input} />}
           {summary.kind === "schema" && summary.schema && (
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <h4 className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
                 Columns
               </h4>
-              <ul className="max-h-40 space-y-0.5 overflow-auto rounded-md border border-border/50 bg-background/60 p-2 font-mono text-[11px]">
+              <ul className="max-h-36 space-y-0.5 overflow-auto rounded-md border border-border/50 bg-background/60 px-2 py-1.5 font-mono text-[11px]">
                 {summary.schema.columns.map((c) => (
                   <li key={c.name} className="flex items-baseline gap-2">
                     <span className="min-w-0 truncate text-foreground">
@@ -824,11 +872,11 @@ function ChatBubble({
             </div>
           )}
           {summary.kind === "rows" && summary.rowsPreview && (
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <h4 className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
                 Preview
               </h4>
-              <pre className="max-h-40 overflow-auto rounded-md border border-border/50 bg-background/60 p-2 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
+              <pre className="max-h-36 overflow-auto rounded-md border border-border/50 bg-background/60 px-2 py-1.5 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
                 {[
                   summary.rowsPreview.columns.join(" · "),
                   ...summary.rowsPreview.rows.map((r) => r.join(" · ")),
@@ -853,47 +901,6 @@ function ChatBubble({
                 }
               />
             )}
-          <div className="flex flex-wrap items-center gap-1">
-            {sql && (
-              <>
-                <Button
-                  size="xs"
-                  variant="outline"
-                  onClick={() => {
-                    setSql(sql);
-                    openArtifact("sql");
-                  }}
-                >
-                  <FileCode2 className="size-3.5" />
-                  Open SQL
-                </Button>
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  onClick={() => {
-                    void navigator.clipboard.writeText(sql).then(
-                      () => toast({ title: "SQL copied", tone: "success" }),
-                      () =>
-                        toast({ title: "Couldn’t copy", tone: "error" }),
-                    );
-                  }}
-                >
-                  <Copy className="size-3.5" />
-                  Copy SQL
-                </Button>
-              </>
-            )}
-            {artifactKind && done && ArtifactIcon && (
-              <Button
-                size="xs"
-                variant="outline"
-                onClick={() => openArtifact(artifactKind)}
-              >
-                <ArtifactIcon className="size-3.5" />
-                Open {artifactKind}
-              </Button>
-            )}
-          </div>
         </ToolContent>
       </Tool>
     );
