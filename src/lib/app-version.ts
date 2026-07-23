@@ -3,4 +3,4 @@
  * Prefer Tauri `getVersion()` at runtime when available; this is the fallback
  * and the value baked for Vite/browser shells.
  */
-export const APP_VERSION = "0.1.3";
+export const APP_VERSION = "0.1.4";
