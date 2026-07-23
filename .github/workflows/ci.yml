@@ -23,8 +23,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm run version:check
       - run: pnpm exec tsc --noEmit
       - run: pnpm build
+      # Installer packaging: .github/workflows/release.yml (on v* tags).
 
   rust:
     name: Rust (cargo test)

@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test:rs": "cargo test --manifest-path src-tauri/Cargo.toml",
+    "version": "node scripts/set-version.mjs",
+    "version:check": "node scripts/check-version.mjs",
     "tauri": "tauri"
   },
   "dependencies": {
