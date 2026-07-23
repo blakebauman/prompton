@@ -1,6 +1,6 @@
 [package]
 name = "prompton"
-version = "0.1.4"
+version = "0.1.5"
 description = "Prompton — conversational agentic database client"
 authors = ["Prompton"]
 edition = "2021"
