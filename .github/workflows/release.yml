@@ -105,10 +105,11 @@ jobs:
       - name: Check versions match
         run: pnpm run version:check
 
-      # Only export APPLE_* when configured. Empty strings still make Tauri try
-      # `security import` and fail the macOS bundle step.
+      # Only export APPLE_* when fully configured. Empty strings make Tauri try
+      # `security import` and fail; partial secrets also fail intentionally.
       - name: Enable Apple signing when configured
         if: matrix.platform == 'macos-latest'
+        id: apple
         env:
           CERT: ${{ secrets.APPLE_CERTIFICATE }}
           CERT_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -116,22 +117,89 @@ jobs:
           APPLE_ID_VALUE: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD_VALUE: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID_VALUE: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_API_ISSUER_VALUE: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_VALUE: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
         shell: bash
         run: |
-          if [ -z "$CERT" ] || [ -z "$APPLE_ID_VALUE" ]; then
+          set -euo pipefail
+
+          has_cert=0
+          has_apple_id_auth=0
+          has_api_auth=0
+          if [ -n "${CERT:-}" ] && [ -n "${CERT_PASSWORD:-}" ] && [ -n "${IDENTITY:-}" ]; then
+            has_cert=1
+          fi
+          if [ -n "${APPLE_ID_VALUE:-}" ] && [ -n "${APPLE_PASSWORD_VALUE:-}" ] && [ -n "${APPLE_TEAM_ID_VALUE:-}" ]; then
+            has_apple_id_auth=1
+          fi
+          if [ -n "${APPLE_API_ISSUER_VALUE:-}" ] && [ -n "${APPLE_API_KEY_VALUE:-}" ] && [ -n "${APPLE_API_KEY_BASE64:-}" ]; then
+            has_api_auth=1
+          fi
+
+          any=0
+          for v in \
+            "${CERT:-}" \
+            "${CERT_PASSWORD:-}" \
+            "${IDENTITY:-}" \
+            "${APPLE_ID_VALUE:-}" \
+            "${APPLE_PASSWORD_VALUE:-}" \
+            "${APPLE_TEAM_ID_VALUE:-}" \
+            "${APPLE_API_ISSUER_VALUE:-}" \
+            "${APPLE_API_KEY_VALUE:-}" \
+            "${APPLE_API_KEY_BASE64:-}"
+          do
+            if [ -n "$v" ]; then
+              any=1
+              break
+            fi
+          done
+
+          if [ "$any" -eq 0 ]; then
             echo "Apple Developer ID secrets missing — ad-hoc macOS signing."
+            echo "See docs/technical/macos-notarization.md"
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+
+          if [ "$has_cert" -ne 1 ]; then
+            echo "::error::Partial APPLE_* secrets for signing. Set APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, and APPLE_SIGNING_IDENTITY together (or clear all APPLE_* for ad-hoc)."
+            exit 1
+          fi
+
+          if [ "$has_apple_id_auth" -ne 1 ] && [ "$has_api_auth" -ne 1 ]; then
+            echo "::error::Signing cert present but notarization auth missing. Set Apple ID (APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID) or App Store Connect API (APPLE_API_ISSUER, APPLE_API_KEY, APPLE_API_KEY_BASE64)."
+            exit 1
+          fi
+
           {
             echo "APPLE_CERTIFICATE<<CERT_EOF"
             echo "$CERT"
             echo "CERT_EOF"
             echo "APPLE_CERTIFICATE_PASSWORD=$CERT_PASSWORD"
             echo "APPLE_SIGNING_IDENTITY=$IDENTITY"
-            echo "APPLE_ID=$APPLE_ID_VALUE"
-            echo "APPLE_PASSWORD=$APPLE_PASSWORD_VALUE"
-            echo "APPLE_TEAM_ID=$APPLE_TEAM_ID_VALUE"
           } >> "$GITHUB_ENV"
+
+          if [ "$has_apple_id_auth" -eq 1 ]; then
+            {
+              echo "APPLE_ID=$APPLE_ID_VALUE"
+              echo "APPLE_PASSWORD=$APPLE_PASSWORD_VALUE"
+              echo "APPLE_TEAM_ID=$APPLE_TEAM_ID_VALUE"
+            } >> "$GITHUB_ENV"
+          fi
+
+          if [ "$has_api_auth" -eq 1 ]; then
+            KEY_PATH="${RUNNER_TEMP}/AuthKey_${APPLE_API_KEY_VALUE}.p8"
+            echo "$APPLE_API_KEY_BASE64" | base64 --decode > "$KEY_PATH"
+            chmod 600 "$KEY_PATH"
+            {
+              echo "APPLE_API_ISSUER=$APPLE_API_ISSUER_VALUE"
+              echo "APPLE_API_KEY=$APPLE_API_KEY_VALUE"
+              echo "APPLE_API_KEY_PATH=$KEY_PATH"
+            } >> "$GITHUB_ENV"
+          fi
+
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
           echo "Apple Developer ID secrets present — signing + notarization enabled."
 
       - name: Build and upload to GitHub Release
@@ -141,6 +209,7 @@ jobs:
           # Updater artifact signatures (minisign). Required for in-app updates.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # APPLE_* come from GITHUB_ENV when the previous step enables signing.
         with:
           tagName: ${{ steps.tag.outputs.name }}
           releaseName: Prompton ${{ steps.tag.outputs.name }}
@@ -151,8 +220,9 @@ jobs:
             **Updates:** in-app updater reads `latest.json` from this release (Tauri minisign key).
 
             ### macOS
-            With `APPLE_*` repository secrets configured: Developer ID signed + notarized.
+            With complete `APPLE_*` repository secrets: Developer ID signed + notarized.
             Without them: **ad-hoc signed** — first launch right-click → **Open**, or `xattr -cr /Applications/Prompton.app`.
+            Setup: `docs/technical/macos-notarization.md`.
 
             ### Linux
             x86_64 `.deb` + AppImage (+ rpm). Windows packaging is deferred.
