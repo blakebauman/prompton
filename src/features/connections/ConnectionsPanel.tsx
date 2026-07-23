@@ -341,7 +341,7 @@ export function ConnectionsPanel() {
         )}
       </ListPaneHeader>
 
-      <ListPaneScroll>
+      <ListPaneScroll className="pt-24">
         <div className="space-y-0.5 px-1">
           {connections.length === 0 && (
             <EmptyState
@@ -378,89 +378,112 @@ export function ConnectionsPanel() {
 
           {filtered.map((c) => {
             const active = activeConnId === c.id;
+            async function toggleConnected() {
+              try {
+                if (c.connected) {
+                  await api.disconnectDb(c.id);
+                  await refresh();
+                  toast({
+                    title: "Disconnected",
+                    description: c.name,
+                  });
+                } else {
+                  await reconnectConnection(c.id);
+                  toast({
+                    title: "Connected",
+                    description: c.name,
+                    tone: "success",
+                  });
+                }
+              } catch (e) {
+                setStatus(String(e));
+                toast({
+                  title: c.connected ? "Disconnect failed" : "Connect failed",
+                  description: String(e),
+                  tone: "error",
+                });
+              }
+            }
+            const metaLine = [dialectLabel(c.dialect), c.summary]
+              .filter(Boolean)
+              .join(" · ");
             return (
               <div key={c.id} className="group relative">
                 <button
                   type="button"
                   className={cn(
-                    "w-full rounded-md border px-2 py-2 text-left transition-colors",
+                    "flex w-full items-start gap-2 rounded-md border px-2 py-1.5 pr-14 text-left transition-colors",
                     active
                       ? "border-border bg-muted/70"
                       : "border-transparent hover:bg-muted/30",
                   )}
                   onClick={() => void selectConnection(c.id)}
                 >
-                  <div className="flex items-center gap-2 pr-7">
-                    <ConnectionStatus connected={c.connected} />
-                    <span className="truncate text-[13px] font-medium leading-snug">
-                      {c.name}
-                    </span>
-                  </div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5 pl-4 text-[11px] text-muted-foreground">
-                    <span
-                      className={cn(
-                        c.connected ? "text-success" : "text-muted-foreground",
+                  <ConnectionStatus connected={c.connected} />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate text-[13px] font-medium leading-snug">
+                        {c.name}
+                      </span>
+                      {c.isProduction && (
+                        <ProdBadge
+                          compact
+                          unlocked={!!c.adminWritesUnlocked}
+                        />
                       )}
-                    >
-                      {c.connected ? "Connected" : "Offline"}
                     </span>
-                    <span aria-hidden>·</span>
-                    <span className="inline-flex items-center gap-1">
-                      <DialectIcon dialect={c.dialect} className="size-3 opacity-80" />
-                      {dialectLabel(c.dialect)}
+                    <span className="mt-0.5 flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground">
+                      <span
+                        className={
+                          c.connected ? "text-success" : "text-muted-foreground"
+                        }
+                      >
+                        {c.connected ? "Connected" : "Offline"}
+                      </span>
+                      <span aria-hidden>·</span>
+                      <DialectIcon
+                        dialect={c.dialect}
+                        className="size-3 shrink-0 opacity-80"
+                      />
+                      <span className="truncate">{metaLine}</span>
                     </span>
-                    {c.isProduction && (
-                      <ProdBadge compact unlocked={!!c.adminWritesUnlocked} />
-                    )}
-                    <span aria-hidden>·</span>
-                    <span className="truncate">{c.summary}</span>
-                  </div>
+                  </span>
                 </button>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      size="icon-xs"
-                      variant="ghost"
-                      className="absolute top-1.5 right-1.5 opacity-60 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100"
-                      aria-label={`Actions for ${c.name}`}
-                    >
-                      <MoreHorizontal className="size-3.5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-52">
-                    <DropdownMenuItem
-                      onClick={() =>
-                        void (async () => {
-                          try {
-                            if (c.connected) {
-                              await api.disconnectDb(c.id);
-                              await refresh();
-                              toast({
-                                title: "Disconnected",
-                                description: c.name,
-                              });
-                            } else {
-                              await reconnectConnection(c.id);
-                              toast({
-                                title: "Connected",
-                                description: c.name,
-                                tone: "success",
-                              });
-                            }
-                          } catch (e) {
-                            setStatus(String(e));
-                            toast({
-                              title: c.connected
-                                ? "Disconnect failed"
-                                : "Connect failed",
-                              description: String(e),
-                              tone: "error",
-                            });
-                          }
-                        })()
-                      }
-                    >
+                <div className="absolute top-1 right-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                  <Button
+                    size="icon-xs"
+                    variant="ghost"
+                    title={c.connected ? "Disconnect" : "Connect"}
+                    aria-label={
+                      c.connected
+                        ? `Disconnect ${c.name}`
+                        : `Connect ${c.name}`
+                    }
+                    onClick={(ev) => {
+                      ev.stopPropagation();
+                      void toggleConnected();
+                    }}
+                  >
+                    {c.connected ? (
+                      <PlugZap className="size-3" />
+                    ) : (
+                      <Plug className="size-3" />
+                    )}
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="icon-xs"
+                        variant="ghost"
+                        className="data-[state=open]:opacity-100"
+                        aria-label={`Actions for ${c.name}`}
+                      >
+                        <MoreHorizontal className="size-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuItem onClick={() => void toggleConnected()}>
                       {c.connected ? (
                         <PlugZap className="size-3.5" />
                       ) : (
@@ -577,7 +600,8 @@ export function ConnectionsPanel() {
                       Remove
                     </DropdownMenuItem>
                   </DropdownMenuContent>
-                </DropdownMenu>
+                  </DropdownMenu>
+                </div>
               </div>
             );
           })}
