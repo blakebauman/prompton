@@ -426,23 +426,41 @@ impl AgentRuntime {
                 .map(|s| s.messages.clone())
                 .unwrap_or_default();
 
-            let (text, tool_calls) = match provider.complete(&messages, &tools).await {
+            let app_delta = app.clone();
+            let (text, tool_calls) = match provider
+                .complete(
+                    &messages,
+                    &tools,
+                    Some(&move |delta: &str| {
+                        if delta.is_empty() {
+                            return;
+                        }
+                        let _ = app_delta.emit(
+                            "agent:delta",
+                            json!({"sessionId": session_id, "delta": delta}),
+                        );
+                    }),
+                    Some(&cancel),
+                )
+                .await
+            {
                 Ok(v) => v,
                 Err(e) => {
+                    let msg = e.to_string();
+                    if msg == "Cancelled" || cancel.is_cancelled() {
+                        let _ = app.emit(
+                            "agent:error",
+                            json!({"sessionId": session_id, "error": "Cancelled"}),
+                        );
+                        return Ok(session_id);
+                    }
                     let _ = app.emit(
                         "agent:error",
-                        json!({"sessionId": session_id, "error": e.to_string()}),
+                        json!({"sessionId": session_id, "error": msg}),
                     );
                     return Err(e);
                 }
             };
-
-            if !text.is_empty() {
-                let _ = app.emit(
-                    "agent:delta",
-                    json!({"sessionId": session_id, "delta": text}),
-                );
-            }
 
             if tool_calls.is_empty() {
                 // Final text-only turn. Skip emitting empty assistant bubbles.
