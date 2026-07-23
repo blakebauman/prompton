@@ -1,0 +1,23 @@
+{
+  "version": "0.1.1",
+  "notes": "Describe the release.",
+  "pub_date": "2026-07-22T00:00:00Z",
+  "platforms": {
+    "darwin-aarch64": {
+      "signature": "CONTENTS OF Prompton.app.tar.gz.sig",
+      "url": "https://github.com/blakebauman/prompton/releases/download/v0.1.1/Prompton.app.tar.gz"
+    },
+    "darwin-x86_64": {
+      "signature": "CONTENTS OF Prompton.app.tar.gz.sig",
+      "url": "https://github.com/blakebauman/prompton/releases/download/v0.1.1/Prompton.app.tar.gz"
+    },
+    "linux-x86_64": {
+      "signature": "CONTENTS OF prompton_0.1.1_amd64.AppImage.sig",
+      "url": "https://github.com/blakebauman/prompton/releases/download/v0.1.1/prompton_0.1.1_amd64.AppImage"
+    },
+    "windows-x86_64": {
+      "signature": "CONTENTS OF Prompton_0.1.1_x64-setup.exe.sig",
+      "url": "https://github.com/blakebauman/prompton/releases/download/v0.1.1/Prompton_0.1.1_x64-setup.exe"
+    }
+  }
+}

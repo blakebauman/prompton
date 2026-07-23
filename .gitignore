@@ -18,6 +18,12 @@ dist-ssr
 src-tauri/target
 src-tauri/gen/schemas
 
+# Updater signing private key (never commit)
+.keys/
+*.key
+*.key.pub
+TAURI_SIGNING_PRIVATE_KEY*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
