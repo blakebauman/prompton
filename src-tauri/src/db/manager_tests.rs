@@ -214,6 +214,80 @@ async fn production_writes_require_hitl() {
 }
 
 #[tokio::test]
+async fn multi_statement_write_requires_hitl() {
+    let dir = std::env::temp_dir().join(format!("prompton-multi-{}", uuid::Uuid::new_v4()));
+    let _ = std::fs::create_dir_all(&dir);
+    let db_path = dir.join("t.db");
+    let mgr = ConnectionManager::new(PathBuf::from(&dir));
+
+    let info = mgr
+        .connect(ConnectRequest {
+            name: "t".into(),
+            dialect: Dialect::Sqlite,
+            host: None,
+            port: None,
+            database: None,
+            username: None,
+            password: None,
+            file_path: Some(db_path.display().to_string()),
+            color: Some("#000".into()),
+            ssl_mode: None,
+            is_production: Some(false),
+        })
+        .await
+        .expect("connect");
+
+    mgr.run_query_trusted(RunQueryRequest {
+        conn_id: info.id,
+        sql: "CREATE TABLE t(id INTEGER)".into(),
+        page_size: 10,
+        query_id: None,
+    })
+    .await
+    .unwrap();
+
+    // First statement is a read — must still require HITL because of DELETE.
+    let blocked = mgr
+        .run_query(
+            RunQueryRequest {
+                conn_id: info.id,
+                sql: "SELECT 1; DELETE FROM t".into(),
+                page_size: 10,
+                query_id: None,
+            },
+            false,
+        )
+        .await;
+    assert!(blocked.is_err());
+
+    let pending = mgr
+        .request_write_approval(info.id, "SELECT 1; INSERT INTO t VALUES (9)".into(), None)
+        .unwrap();
+    let page = mgr
+        .confirm_write(pending.confirmation_id, true, None)
+        .await
+        .unwrap()
+        .expect("approved multi-statement write");
+    assert!(page.affected_rows.unwrap_or(0) >= 1);
+
+    let rows = mgr
+        .run_query(
+            RunQueryRequest {
+                conn_id: info.id,
+                sql: "SELECT id FROM t".into(),
+                page_size: 10,
+                query_id: None,
+            },
+            false,
+        )
+        .await
+        .unwrap();
+    assert_eq!(rows.total_rows, 1);
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[tokio::test]
 async fn cancel_inflight_query_by_client_id() {
     let dir = std::env::temp_dir().join(format!("prompton-cancel-{}", uuid::Uuid::new_v4()));
     let _ = std::fs::create_dir_all(&dir);

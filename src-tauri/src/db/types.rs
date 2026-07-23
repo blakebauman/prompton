@@ -226,6 +226,94 @@ pub fn strip_sql_noise(sql: &str) -> String {
     out
 }
 
+/// Split a SQL script on `;` outside comments/strings.
+pub fn split_sql_statements(sql: &str) -> Vec<String> {
+    let bytes = sql.as_bytes();
+    let mut stmts = Vec::new();
+    let mut cur = String::new();
+    let mut i = 0;
+    while i < bytes.len() {
+        let c = bytes[i] as char;
+        if c == '-' && i + 1 < bytes.len() && bytes[i + 1] == b'-' {
+            cur.push(c);
+            cur.push(bytes[i + 1] as char);
+            i += 2;
+            while i < bytes.len() && bytes[i] != b'\n' {
+                cur.push(bytes[i] as char);
+                i += 1;
+            }
+            continue;
+        }
+        if c == '/' && i + 1 < bytes.len() && bytes[i + 1] == b'*' {
+            cur.push(c);
+            cur.push(bytes[i + 1] as char);
+            i += 2;
+            while i + 1 < bytes.len() && !(bytes[i] == b'*' && bytes[i + 1] == b'/') {
+                cur.push(bytes[i] as char);
+                i += 1;
+            }
+            if i + 1 < bytes.len() {
+                cur.push(bytes[i] as char);
+                cur.push(bytes[i + 1] as char);
+                i += 2;
+            }
+            continue;
+        }
+        if c == '\'' {
+            cur.push(c);
+            i += 1;
+            while i < bytes.len() {
+                cur.push(bytes[i] as char);
+                if bytes[i] == b'\'' {
+                    if i + 1 < bytes.len() && bytes[i + 1] == b'\'' {
+                        cur.push(bytes[i + 1] as char);
+                        i += 2;
+                        continue;
+                    }
+                    i += 1;
+                    break;
+                }
+                i += 1;
+            }
+            continue;
+        }
+        if c == '"' {
+            cur.push(c);
+            i += 1;
+            while i < bytes.len() {
+                cur.push(bytes[i] as char);
+                if bytes[i] == b'"' {
+                    if i + 1 < bytes.len() && bytes[i + 1] == b'"' {
+                        cur.push(bytes[i + 1] as char);
+                        i += 2;
+                        continue;
+                    }
+                    i += 1;
+                    break;
+                }
+                i += 1;
+            }
+            continue;
+        }
+        if c == ';' {
+            let trimmed = cur.trim();
+            if !trimmed.is_empty() {
+                stmts.push(trimmed.to_string());
+            }
+            cur.clear();
+            i += 1;
+            continue;
+        }
+        cur.push(c);
+        i += 1;
+    }
+    let trimmed = cur.trim();
+    if !trimmed.is_empty() {
+        stmts.push(trimmed.to_string());
+    }
+    stmts
+}
+
 fn sql_tokens(upper: &str) -> Vec<&str> {
     upper
         .split(|c: char| !c.is_ascii_alphanumeric() && c != '_')
@@ -233,10 +321,7 @@ fn sql_tokens(upper: &str) -> Vec<&str> {
         .collect()
 }
 
-/// True when SQL may mutate data/schema or run transactional/admin side effects.
-/// Safe default: unknown leading keywords are treated as mutating.
-/// `WITH … INSERT/UPDATE/DELETE` is detected (CTE write bypass closed).
-pub fn is_mutating_sql(sql: &str) -> bool {
+fn is_mutating_statement(sql: &str) -> bool {
     let clean = strip_sql_noise(sql);
     let upper = clean.trim().to_ascii_uppercase();
     if upper.is_empty() {
@@ -258,9 +343,21 @@ pub fn is_mutating_sql(sql: &str) -> bool {
     true
 }
 
+/// True when SQL may mutate data/schema or run transactional/admin side effects.
+/// Safe default: unknown leading keywords are treated as mutating.
+/// Closes CTE-write and `SELECT …; DELETE …` multi-statement bypasses.
+pub fn is_mutating_sql(sql: &str) -> bool {
+    let stmts = split_sql_statements(sql);
+    if stmts.is_empty() {
+        return false;
+    }
+    stmts.iter().any(|s| is_mutating_statement(s))
+}
+
 /// Statements that should return a row set (vs execute-only).
+/// Intended for a single statement (callers should split scripts first).
 pub fn is_row_returning_sql(sql: &str) -> bool {
-    !is_mutating_sql(sql)
+    !is_mutating_statement(sql)
 }
 
 #[cfg(test)]
@@ -307,5 +404,31 @@ mod sql_classify_tests {
     #[test]
     fn unknown_leading_keyword_is_mutating() {
         assert!(is_mutating_sql("CLUSTER t"));
+    }
+
+    #[test]
+    fn multi_statement_write_after_select_is_mutating() {
+        assert!(is_mutating_sql("SELECT 1; DELETE FROM t"));
+        assert!(is_mutating_sql(
+            "SELECT * FROM t WHERE x = 'a;b'; DROP TABLE t"
+        ));
+        assert!(is_mutating_sql(
+            "-- just a comment; with semicolon\nSELECT 1;\nINSERT INTO t VALUES (1)"
+        ));
+        assert!(!is_mutating_sql("SELECT 1; SELECT 2"));
+        assert!(!is_mutating_sql("SELECT ';'; SELECT 2"));
+    }
+
+    #[test]
+    fn split_respects_strings_and_comments() {
+        let stmts = split_sql_statements(
+            "SELECT ';'; -- ignored;\nSELECT 2 /* ; */ ; INSERT INTO t VALUES (1)",
+        );
+        assert_eq!(stmts.len(), 3);
+        assert!(stmts[0].starts_with("SELECT"));
+        assert!(stmts[1].contains("SELECT 2"));
+        assert!(stmts[2].starts_with("INSERT"));
+        // Semicolon inside the line comment must not create an extra statement.
+        assert!(!stmts.iter().any(|s| s.trim() == "-- ignored"));
     }
 }

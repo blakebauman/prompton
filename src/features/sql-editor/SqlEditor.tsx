@@ -29,7 +29,7 @@ import {
   isQueryCancelled,
   runCancellableQuery,
 } from "@/lib/run-query";
-import { isMutatingSql } from "@/lib/sql-mutate";
+import { isMutatingSql, splitSqlStatements } from "@/lib/sql-mutate";
 import { api } from "@/lib/tauri";
 import type { PendingConfirmation } from "@/lib/types";
 import { useShortcuts } from "@/stores/shortcuts";
@@ -54,6 +54,7 @@ export function SqlEditor() {
 
   const active = connections.find((c) => c.id === activeConnId);
   const isProd = !!active?.isProduction;
+  const statementCount = splitSqlStatements(sql).length;
   const mutating = isMutatingSql(sql);
 
   async function executeRead() {
@@ -222,9 +223,19 @@ export function SqlEditor() {
               <span className="capitalize">{active?.dialect ?? "sql"}</span>
               <span aria-hidden>·</span>
               {mutating ? (
-                <span className="text-destructive">Write · approval</span>
+                <span className="text-destructive">
+                  {statementCount > 1
+                    ? `${statementCount} stmts · write · approval`
+                    : "Write · approval"}
+                </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5">
+                  {statementCount > 1 && (
+                    <>
+                      <span>{statementCount} stmts</span>
+                      <span aria-hidden>·</span>
+                    </>
+                  )}
                   <KeyCapChord keys={runSqlChord} className="scale-90" />
                   <span>run</span>
                   <span aria-hidden>·</span>

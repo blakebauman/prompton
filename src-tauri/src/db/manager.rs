@@ -7,12 +7,13 @@ use parking_lot::RwLock;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-use crate::db::driver::Driver;
+use crate::db::driver::{Driver, ExecResult};
 use crate::db::postgres::PostgresDriver;
 use crate::db::sqlite::SqliteDriver;
 use crate::db::types::{
     ConnectRequest, ConnectionConfig, ConnectionInfo, Dialect, PendingWrite, QueryColumn,
     QueryPage, RunQueryRequest, SchemaNode, TableDescription, is_mutating_sql,
+    split_sql_statements,
 };
 use crate::error::{AppError, AppResult, is_connection_lost};
 use crate::secrets::SecretStore;
@@ -540,26 +541,73 @@ impl ConnectionManager {
         self.cancel_tokens.write().insert(query_id, token.clone());
 
         let driver = self.driver(req.conn_id)?;
-        let sql = req.sql.clone();
+        let statements = split_sql_statements(&req.sql);
+        if statements.is_empty() {
+            self.cancel_tokens.write().remove(&query_id);
+            return Err(AppError::msg("Empty SQL"));
+        }
+
         // Fetch a large window into memory; UI pages through it via fetch_page.
         let max_rows = 50_000;
         let page_size = req.page_size.max(1).min(5_000);
         let started = Instant::now();
 
-        let result = tokio::select! {
-            biased;
-            _ = token.cancelled() => {
+        // Run statements sequentially so `SELECT …; DELETE …` cannot hide behind
+        // a single-protocol execute, and cancel can land between statements.
+        let mut last_rows: Option<ExecResult> = None;
+        let mut affected_total: u64 = 0;
+        let mut saw_affected = false;
+        let mut truncated = false;
+
+        for stmt in &statements {
+            if token.is_cancelled() {
                 self.cancel_tokens.write().remove(&query_id);
                 return Err(AppError::msg("Query cancelled"));
             }
-            res = driver.execute(&sql, max_rows) => res,
-        };
+            let result = tokio::select! {
+                biased;
+                _ = token.cancelled() => {
+                    self.cancel_tokens.write().remove(&query_id);
+                    return Err(AppError::msg("Query cancelled"));
+                }
+                res = driver.execute(stmt, max_rows) => res,
+            };
+            let result = match result {
+                Ok(v) => v,
+                Err(e) => {
+                    self.cancel_tokens.write().remove(&query_id);
+                    return Err(self.note_driver_error(req.conn_id, e));
+                }
+            };
+            truncated = truncated || result.truncated;
+            if let Some(n) = result.affected_rows {
+                affected_total = affected_total.saturating_add(n);
+                saw_affected = true;
+            }
+            if !result.columns.is_empty() || !result.rows.is_empty() {
+                last_rows = Some(result);
+            } else if last_rows.is_none() {
+                last_rows = Some(result);
+            }
+        }
 
         self.cancel_tokens.write().remove(&query_id);
-        let result = match result {
-            Ok(v) => v,
-            Err(e) => return Err(self.note_driver_error(req.conn_id, e)),
+        let result = last_rows.unwrap_or(ExecResult {
+            columns: vec![],
+            rows: vec![],
+            affected_rows: if saw_affected {
+                Some(affected_total)
+            } else {
+                None
+            },
+            truncated: false,
+        });
+        let affected_rows = if saw_affected {
+            Some(affected_total)
+        } else {
+            result.affected_rows
         };
+
         let duration_ms = started.elapsed().as_millis() as u64;
         let total_rows = result.rows.len();
         let page_limit = page_size.min(total_rows.max(1));
@@ -579,8 +627,8 @@ impl ConnectionManager {
             offset: 0,
             limit: page_limit,
             total_rows,
-            truncated: result.truncated,
-            affected_rows: result.affected_rows,
+            truncated: truncated || result.truncated,
+            affected_rows,
             duration_ms,
             sql: req.sql.clone(),
         };
@@ -593,8 +641,8 @@ impl ConnectionManager {
                 sql: req.sql,
                 columns: page.columns.clone(),
                 rows: result.rows,
-                affected_rows: result.affected_rows,
-                truncated: result.truncated,
+                affected_rows,
+                truncated: page.truncated,
                 duration_ms,
             },
         );
