@@ -94,7 +94,7 @@ export function ActivityRail({
       </div>
 
       <span
-        className="mt-auto pb-2 text-[10px] tabular-nums text-muted-foreground/50"
+        className="mt-auto w-full pb-3 text-center text-[10px] tabular-nums text-muted-foreground/60"
         title={`Prompton v${APP_VERSION}`}
       >
         v{APP_VERSION}

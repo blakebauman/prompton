@@ -456,11 +456,11 @@ export function AssistantPanel({
   return (
     <div className="relative flex h-full flex-col overflow-hidden">
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-gradient-to-b from-background to-transparent" />
-      <div className="relative z-20 flex h-9 shrink-0 items-center justify-between gap-2 px-3">
+      <div className="relative z-20 flex h-9 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-2">
         <div className="flex min-w-0 items-center gap-2">
           {agentBusy && <ActivityPulse mode="busy" />}
           <h2 className="min-w-0" aria-label="Prompton">
-            <BrandMark size="md" />
+            <BrandMark size="sm" />
           </h2>
           {active && (
             <span className="inline-flex min-w-0 items-center gap-1.5 truncate text-[11px] text-muted-foreground">

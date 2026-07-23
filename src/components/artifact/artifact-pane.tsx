@@ -52,8 +52,8 @@ function OpenArtifactPane() {
   if (!artifact.open) return null;
 
   return (
-    <aside className="@container flex h-full w-full flex-col overflow-hidden border-l border-border/60 bg-muted/30">
-      <header className="flex h-9 shrink-0 items-stretch justify-between gap-1 border-b border-border/60 px-1">
+    <aside className="@container flex h-full w-full flex-col overflow-hidden bg-muted/30">
+      <header className="flex h-9 shrink-0 items-center justify-between gap-1 border-b border-border/60 px-2">
         <UnderlineTabs>
           {SWITCHABLE.map(({ kind, label, icon: Icon }) => {
             const selected = artifact.kind === kind;
@@ -77,7 +77,7 @@ function OpenArtifactPane() {
         <Button
           variant="ghost"
           size="icon-xs"
-          className="my-1 shrink-0 rounded-none"
+          className="shrink-0"
           onClick={close}
           aria-label="Close viewer"
         >

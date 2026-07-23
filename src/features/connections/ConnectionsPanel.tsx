@@ -308,9 +308,11 @@ export function ConnectionsPanel() {
 
   return (
     <ListPane>
-      <ListPaneHeader>
-        <ListPaneTitleRow>
-          <ListPaneTitle>Connections</ListPaneTitle>
+      <ListPaneHeader className="px-0 pt-0">
+        <ListPaneTitleRow className="mb-0 h-9 border-b border-border/60 px-2">
+          <ListPaneTitle className="text-sm font-semibold">
+            Connections
+          </ListPaneTitle>
           <ListPaneActions>
             <Button
               size="icon-xs"
@@ -333,15 +335,19 @@ export function ConnectionsPanel() {
           </ListPaneActions>
         </ListPaneTitleRow>
         {connections.length > 0 && (
-          <ListPaneSearch
-            value={query}
-            onChange={setQuery}
-            placeholder="Search connections…"
-          />
+          <div className="px-2 pt-1.5">
+            <ListPaneSearch
+              value={query}
+              onChange={setQuery}
+              placeholder="Search connections…"
+            />
+          </div>
         )}
       </ListPaneHeader>
 
-      <ListPaneScroll className="pt-24">
+      <ListPaneScroll
+        className={connections.length > 0 ? "pt-24" : "pt-12"}
+      >
         <div className="space-y-0.5 px-1">
           {connections.length === 0 && (
             <EmptyState

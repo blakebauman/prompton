@@ -38,7 +38,7 @@ export function DetailPaneHeader({
   return (
     <div
       className={cn(
-        "absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 px-6 pt-5",
+        "absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 px-4 pt-3",
         className,
       )}
     >
@@ -57,7 +57,7 @@ export function DetailPaneTitle({
   return (
     <h2
       className={cn(
-        "mt-1 truncate text-xl font-bold tracking-tight",
+        "truncate text-base font-bold tracking-tight",
         className,
       )}
     >
@@ -128,8 +128,8 @@ export function DetailPaneScroll({
       <div
         ref={ref}
         className={cn(
-          "h-full overflow-y-auto overflow-x-hidden px-6 pb-8",
-          padTop && "pt-20",
+          "h-full overflow-y-auto overflow-x-hidden px-4 pb-8",
+          padTop && "pt-16",
           className,
         )}
         onScroll={onScroll}

@@ -124,7 +124,7 @@ export function ListPaneSearch({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="bg-background/50 pr-2.5 pl-8 text-xs shadow-none"
+        className="h-7 bg-background/50 pr-2.5 pl-8 text-xs shadow-none"
       />
     </div>
   );

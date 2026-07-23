@@ -17,9 +17,8 @@ export function BrandMark({
   wordmark = true,
   size = "md",
 }: BrandMarkProps) {
-  // Keep chrome marks compact: shell stays size-7 so the chat header (h-10)
-  // doesn't balloon; glyph is a touch larger than the old size-3.5.
-  const shell = "size-7";
+  // Compact chrome mark for h-9 headers; md is slightly larger for empty states.
+  const shell = size === "sm" ? "size-6" : "size-7";
   const icon = size === "sm" ? "size-3.5" : "size-4";
   const name = size === "sm" ? "text-sm" : "text-base";
 
