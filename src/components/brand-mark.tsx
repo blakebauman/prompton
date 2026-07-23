@@ -1,3 +1,5 @@
+import { Database } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 type BrandMarkProps = {
@@ -8,15 +10,16 @@ type BrandMarkProps = {
 };
 
 /**
- * Compact Prompton mark. Use with wordmark where the agent/product
- * identity should lead (assistant header); mark-only for dense chrome.
+ * Compact Prompton mark (Lucide database). Use with wordmark where the
+ * agent/product identity should lead; mark-only for dense chrome.
  */
 export function BrandMark({
   className,
   wordmark = true,
   size = "md",
 }: BrandMarkProps) {
-  const mark = size === "sm" ? "size-5 text-[10px]" : "size-6 text-[11px]";
+  const shell = size === "sm" ? "size-5" : "size-6";
+  const icon = size === "sm" ? "size-3" : "size-3.5";
   const name = size === "sm" ? "text-sm" : "text-base";
 
   return (
@@ -25,12 +28,12 @@ export function BrandMark({
     >
       <span
         className={cn(
-          "flex shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/50 font-bold tracking-tight",
-          mark,
+          "flex shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/50 text-foreground",
+          shell,
         )}
         aria-hidden
       >
-        P
+        <Database className={icon} strokeWidth={2.25} />
       </span>
       {wordmark && (
         <span className={cn("font-semibold tracking-tight", name)}>
