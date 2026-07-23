@@ -2,6 +2,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChartColumn,
+  Columns3,
   Copy,
   Download,
   FileCode2,
@@ -16,8 +17,10 @@ import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -86,10 +89,21 @@ export function ResultsGrid() {
     col: number;
     value: unknown;
   } | null>(null);
+  /** Column names hidden from the grid (export still uses full result). */
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const active = connections.find((c) => c.id === activeConnId);
   const rowCount = result?.totalRows ?? 0;
   const columns = result?.columns ?? [];
+  const visibleColumns = useMemo(
+    () =>
+      columns
+        .map((col, index) => ({ col, index }))
+        .filter(({ col }) => !hiddenColumns.has(col.name)),
+    [columns, hiddenColumns],
+  );
   const target = useMemo(
     () => (result ? parseSimpleSelectTarget(result.sql) : null),
     [result],
@@ -109,6 +123,7 @@ export function ResultsGrid() {
     setTableMeta(null);
     setPendingWrite(null);
     setPendingEdit(null);
+    setHiddenColumns(new Set());
   }, [result?.queryId]);
 
   useEffect(() => {
@@ -307,6 +322,26 @@ export function ResultsGrid() {
         tone: "error",
       });
     }
+  }
+
+  function toggleColumn(name: string) {
+    setHiddenColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+        return next;
+      }
+      if (columns.length - next.size <= 1) {
+        toast({ title: "Keep at least one column" });
+        return prev;
+      }
+      next.add(name);
+      return next;
+    });
+  }
+
+  function showAllColumns() {
+    setHiddenColumns(new Set());
   }
 
   function selectCell(
@@ -528,6 +563,42 @@ export function ResultsGrid() {
             <Copy className="size-3.5" />
             Copy
           </Button>
+          {columns.length > 1 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="xs" variant="ghost">
+                  <Columns3 className="size-3.5" />
+                  {hiddenColumns.size > 0
+                    ? `${visibleColumns.length}/${columns.length}`
+                    : "Columns"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-52">
+                <DropdownMenuLabel className="text-[11px] font-normal text-muted-foreground">
+                  Visible columns
+                </DropdownMenuLabel>
+                {columns.map((c) => (
+                  <DropdownMenuCheckboxItem
+                    key={c.name}
+                    checked={!hiddenColumns.has(c.name)}
+                    onSelect={(e) => e.preventDefault()}
+                    onCheckedChange={() => toggleColumn(c.name)}
+                  >
+                    <span className="truncate" title={c.name}>
+                      {c.name}
+                    </span>
+                  </DropdownMenuCheckboxItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  disabled={hiddenColumns.size === 0}
+                  onClick={showAllColumns}
+                >
+                  Show all
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           <Button
             size="xs"
             variant="ghost"
@@ -618,7 +689,7 @@ export function ResultsGrid() {
           }}
         >
           <div className="sticky top-0 z-10 flex border-b border-border/60 bg-muted/50 backdrop-blur">
-            {columns.map((c) => (
+            {visibleColumns.map(({ col: c }) => (
               <div
                 key={c.name}
                 className="w-40 shrink-0 truncate border-r border-border/50 px-2 py-1.5 font-medium"
@@ -644,7 +715,7 @@ export function ResultsGrid() {
                   height: vRow.size,
                 }}
               >
-                {columns.map((c, i) => {
+                {visibleColumns.map(({ col: c, index: i }) => {
                   const key = cellKey(vRow.index, i);
                   const isSelected = selected.has(key);
                   const isEditing =

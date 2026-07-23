@@ -1,6 +1,7 @@
 import {
   Braces,
   ChartColumn,
+  Copy,
   FileCode2,
   ListTree,
   Network,
@@ -20,6 +21,7 @@ import { ResultsChart } from "@/features/results/ResultsChart";
 import { ResultsGrid } from "@/features/results/ResultsGrid";
 import { SchemaPanel } from "@/features/schema/SchemaPanel";
 import { SqlEditor } from "@/features/sql-editor/SqlEditor";
+import { toast } from "@/hooks/use-toast";
 import { api } from "@/lib/tauri";
 import { useWorkspace } from "@/stores/workspace";
 
@@ -93,22 +95,52 @@ function OpenArtifactPane() {
           {artifact.kind === "sql" && <SqlEditor />}
           {artifact.kind === "schema" && <SchemaPanel />}
           {artifact.kind === "explain" && (
-            <div className="h-full overflow-y-auto overflow-x-hidden">
-              <div className="p-3">
-                {explainPlan ? (
-                  <ExpandableClamp maxHeight={320}>
-                    <pre className="whitespace-pre-wrap rounded-lg border border-border/60 bg-muted/40 p-3 font-mono text-xs leading-relaxed">
-                      {explainPlan}
-                    </pre>
-                  </ExpandableClamp>
-                ) : (
+            <div className="flex h-full flex-col overflow-hidden">
+              {explainPlan ? (
+                <>
+                  <div className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-2">
+                    <span className="truncate px-1 text-[11px] text-muted-foreground">
+                      Explain plan
+                    </span>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(explainPlan).then(
+                          () =>
+                            toast({
+                              title: "Explain copied",
+                              tone: "success",
+                            }),
+                          () =>
+                            toast({
+                              title: "Couldn’t copy",
+                              tone: "error",
+                            }),
+                        );
+                      }}
+                    >
+                      <Copy className="size-3.5" />
+                      Copy
+                    </Button>
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3">
+                    <ExpandableClamp maxHeight={480}>
+                      <pre className="whitespace-pre-wrap rounded-lg border border-border/60 bg-muted/40 p-3 font-mono text-xs leading-relaxed">
+                        {explainPlan}
+                      </pre>
+                    </ExpandableClamp>
+                  </div>
+                </>
+              ) : (
+                <div className="p-3">
                   <EmptyArtifact
                     title="No explain plan"
                     description="Run Explain from SQL, or ask the agent to explain a query."
                     actions={
                       <>
                         <Button
-                          size="sm"
+                          size="xs"
                           variant="outline"
                           onClick={() => open("sql")}
                         >
@@ -116,7 +148,7 @@ function OpenArtifactPane() {
                           Open SQL
                         </Button>
                         <Button
-                          size="sm"
+                          size="xs"
                           variant="secondary"
                           disabled={!activeConnId || !sql.trim()}
                           onClick={() =>
@@ -131,8 +163,17 @@ function OpenArtifactPane() {
                                 useWorkspace
                                   .getState()
                                   .setStatus("Explain plan ready");
+                                toast({
+                                  title: "Explain ready",
+                                  tone: "success",
+                                });
                               } catch (e) {
                                 useWorkspace.getState().setStatus(String(e));
+                                toast({
+                                  title: "Explain failed",
+                                  description: String(e),
+                                  tone: "error",
+                                });
                               }
                             })()
                           }
@@ -143,8 +184,8 @@ function OpenArtifactPane() {
                       </>
                     }
                   />
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
           {artifact.kind === "context" && (
@@ -152,14 +193,43 @@ function OpenArtifactPane() {
               <div className="space-y-3 p-3">
                 {contextReport ? (
                   <>
-                    <p className="text-xs text-muted-foreground">
-                      <span className="font-medium text-foreground">
-                        {contextReport.totalChars}
-                      </span>{" "}
-                      chars
-                      {contextReport.truncated ? " · truncated" : ""} sent to the
-                      model
-                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-medium text-foreground">
+                          {contextReport.totalChars}
+                        </span>{" "}
+                        chars
+                        {contextReport.truncated ? " · truncated" : ""} sent to
+                        the model
+                      </p>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        onClick={() => {
+                          const text = contextReport.slices
+                            .map(
+                              (s) =>
+                                `## ${s.label} (${s.chars})\n${s.content}`,
+                            )
+                            .join("\n\n");
+                          void navigator.clipboard.writeText(text).then(
+                            () =>
+                              toast({
+                                title: "Context copied",
+                                tone: "success",
+                              }),
+                            () =>
+                              toast({
+                                title: "Couldn’t copy",
+                                tone: "error",
+                              }),
+                          );
+                        }}
+                      >
+                        <Copy className="size-3.5" />
+                        Copy
+                      </Button>
+                    </div>
                     {contextReport.slices.map((s) => (
                       <details
                         key={s.label}
