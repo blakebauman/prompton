@@ -216,9 +216,11 @@ pub async fn agent_confirm(
     approved: bool,
 ) -> AppResult<()> {
     let db = Arc::clone(&state.db);
+    let skills = Arc::clone(&state.skills);
+    let prompts = Arc::clone(&state.prompts);
     state
         .agent
-        .confirm_and_run(app, db, confirmation_id, approved)
+        .confirm_and_run(app, db, skills, prompts, confirmation_id, approved)
         .await
 }
 

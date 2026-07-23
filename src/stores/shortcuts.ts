@@ -7,7 +7,9 @@ export type ShortcutId =
   | "toggleArtifact"
   | "openSettings"
   | "focusChat"
-  | "runSql";
+  | "runSql"
+  | "cancelQuery"
+  | "formatSql";
 
 export type ShortcutDef = {
   id: ShortcutId;
@@ -36,6 +38,16 @@ export const SHORTCUT_DEFS: ShortcutDef[] = [
     title: "Run SQL",
     description: "Execute the SQL editor contents.",
   },
+  {
+    id: "cancelQuery",
+    title: "Cancel query",
+    description: "Stop the in-flight SQL query.",
+  },
+  {
+    id: "formatSql",
+    title: "Format SQL",
+    description: "Pretty-print the SQL editor contents.",
+  },
 ];
 
 function defaultBindings(): Record<ShortcutId, string[]> {
@@ -45,6 +57,8 @@ function defaultBindings(): Record<ShortcutId, string[]> {
     openSettings: [mod, "Comma"],
     focusChat: [mod, "KeyK"],
     runSql: [mod, "Return"],
+    cancelQuery: ["Escape"],
+    formatSql: [mod, "ShiftLeft", "KeyF"],
   };
 }
 
@@ -65,6 +79,19 @@ export const useShortcuts = create<ShortcutsStore>()(
         })),
       resetDefaults: () => set({ bindings: defaultBindings() }),
     }),
-    { name: "prompton.shortcuts" },
+    {
+      name: "prompton.shortcuts",
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<ShortcutsStore>;
+        return {
+          ...current,
+          ...p,
+          bindings: {
+            ...defaultBindings(),
+            ...(p.bindings ?? {}),
+          },
+        };
+      },
+    },
   ),
 );

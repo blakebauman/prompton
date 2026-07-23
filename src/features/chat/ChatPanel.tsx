@@ -562,10 +562,12 @@ export function ChatPanel({
             const id = pendingConfirm.confirmationId;
             setPendingConfirm(null);
             try {
+              setStatus("Write rejected — agent continuing…");
               await api.agentConfirm(id, false);
-              setAgentBusy(false);
-              setStatus("Write rejected");
-              toast({ title: "Write rejected" });
+              toast({
+                title: "Write rejected",
+                description: "Agent will continue",
+              });
             } catch (e) {
               setAgentBusy(false);
               setStatus(String(e));
@@ -584,16 +586,16 @@ export function ChatPanel({
             const prod = !!pendingConfirm.isProduction;
             setPendingConfirm(null);
             try {
-              await api.agentConfirm(id, true);
               setStatus(
                 prod
                   ? "Production write approved — agent continuing…"
                   : "Write approved — agent continuing…",
               );
+              await api.agentConfirm(id, true);
               toast({
                 title: "Write approved",
                 description: prod
-                  ? "Production statement approved"
+                  ? "Production statement approved — agent continuing"
                   : "Agent will continue",
                 tone: "success",
               });

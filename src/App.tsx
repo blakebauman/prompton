@@ -34,6 +34,8 @@ import { LibraryPanel } from "@/features/library/LibraryPanel";
 import { SettingsPanel } from "@/features/settings/SettingsPanel";
 import { useActivityLogBridge } from "@/hooks/use-activity-log-bridge";
 import {
+  requestCancelQuery,
+  requestFormatSql,
   requestRunSql,
   useAppShortcuts,
 } from "@/hooks/use-app-shortcuts";
@@ -137,6 +139,16 @@ function AppShell() {
       setActivity("workspace");
       openArtifact("sql");
       window.setTimeout(() => requestRunSql(), 50);
+    },
+    formatSql: () => {
+      setActivity("workspace");
+      openArtifact("sql");
+      window.setTimeout(() => requestFormatSql(), 50);
+    },
+    cancelQuery: () => {
+      const s = useWorkspace.getState();
+      if (!(s.running && s.activeQueryId)) return false;
+      requestCancelQuery();
     },
   });
 

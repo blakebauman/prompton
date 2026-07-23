@@ -57,6 +57,9 @@ pub struct PendingConfirmation {
     pub is_production: bool,
     #[serde(default)]
     pub admin_writes_unlocked: bool,
+    /// Tool call id paused for HITL so the session can resume cleanly.
+    #[serde(default)]
+    pub tool_call_id: String,
 }
 
 struct Session {
@@ -333,6 +336,20 @@ impl AgentRuntime {
         }
 
         let _ = self.ensure_ollama_model().await;
+        self.run_tool_loop(app, db, skills, prompts, session_id, req.conn_id)
+            .await
+    }
+
+    /// Continue the provider ↔ tool loop for an existing session.
+    async fn run_tool_loop(
+        &self,
+        app: AppHandle,
+        db: Arc<ConnectionManager>,
+        skills: Arc<SkillStore>,
+        prompts: Arc<PromptStore>,
+        session_id: Uuid,
+        conn_id: Uuid,
+    ) -> AppResult<Uuid> {
         let provider = self.provider()?;
         let tools = Self::tool_specs();
         let cancel = self
@@ -418,7 +435,7 @@ impl AgentRuntime {
                     .execute_tool(
                         &app,
                         session_id,
-                        req.conn_id,
+                        conn_id,
                         &db,
                         &skills,
                         &prompts,
@@ -558,6 +575,7 @@ impl AgentRuntime {
                         reason: write.reason,
                         is_production: write.is_production,
                         admin_writes_unlocked: write.admin_writes_unlocked,
+                        tool_call_id: call.id.clone(),
                     };
                     self.pending
                         .write()
@@ -624,6 +642,8 @@ impl AgentRuntime {
         &self,
         app: AppHandle,
         db: Arc<ConnectionManager>,
+        skills: Arc<SkillStore>,
+        prompts: Arc<PromptStore>,
         confirmation_id: Uuid,
         approved: bool,
     ) -> AppResult<()> {
@@ -633,30 +653,62 @@ impl AgentRuntime {
             .remove(&confirmation_id)
             .ok_or_else(|| AppError::msg("Confirmation not found"))?;
 
-        if !approved {
-            // Also drop the staged write so it cannot be confirmed later.
-            let _ = db.confirm_write(confirmation_id, false, None).await;
-            let _ = app.emit(
-                "agent:done",
-                json!({"sessionId": pending.session_id, "cancelled": true}),
-            );
-            return Ok(());
-        }
+        let tool_call_id = if pending.tool_call_id.is_empty() {
+            confirmation_id.to_string()
+        } else {
+            pending.tool_call_id.clone()
+        };
 
-        let page = db
-            .confirm_write(confirmation_id, true, None)
-            .await?
-            .ok_or_else(|| AppError::msg("Approved write returned no result"))?;
-        let _ = app.emit("query:result", &page);
+        let tool_content = if !approved {
+            let _ = db.confirm_write(confirmation_id, false, None).await;
+            "User rejected the write. Do not retry unless the user explicitly asks again."
+                .to_string()
+        } else {
+            let page = db
+                .confirm_write(confirmation_id, true, None)
+                .await?
+                .ok_or_else(|| AppError::msg("Approved write returned no result"))?;
+            let _ = app.emit("query:result", &page);
+            format!(
+                "Executed after HITL approval. rows={}, affected={:?}, durationMs={}",
+                page.total_rows, page.affected_rows, page.duration_ms
+            )
+        };
+
         let _ = app.emit(
             "agent:tool_result",
             json!({
                 "sessionId": pending.session_id,
+                "id": tool_call_id,
                 "name": "run_query",
-                "result": format!("Executed after HITL approval. rows={}, affected={:?}", page.total_rows, page.affected_rows),
+                "result": truncate_for_event(&tool_content),
             }),
         );
-        let _ = app.emit("agent:done", json!({"sessionId": pending.session_id}));
+
+        self.sessions
+            .write()
+            .get_mut(&pending.session_id)
+            .map(|s| {
+                s.messages.push(ChatMessage {
+                    role: "tool".into(),
+                    content: tool_content,
+                    tool_call_id: Some(tool_call_id),
+                    name: Some("run_query".into()),
+                    tool_calls: None,
+                })
+            });
+
+        // Resume the agent so it can summarize / continue after HITL.
+        let _ = self
+            .run_tool_loop(
+                app,
+                db,
+                skills,
+                prompts,
+                pending.session_id,
+                pending.conn_id,
+            )
+            .await?;
         Ok(())
     }
 }
