@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/use-toast";
 import { api, isDesktopRequiredError } from "@/lib/tauri";
 import type { PromptEntry, SkillMeta } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -158,9 +159,10 @@ export function LibraryPanel({
   async function createItem() {
     const name = newName.trim();
     if (!name) {
-      setStatus(
-        tab === "skills" ? "Skill name is required" : "Prompt title is required",
-      );
+      const msg =
+        tab === "skills" ? "Skill name is required" : "Prompt title is required";
+      setStatus(msg);
+      toast({ title: msg });
       return;
     }
     setCreating(true);
@@ -171,16 +173,33 @@ export function LibraryPanel({
         setSkills(list);
         setSelectedSkill(saved.name);
         setStatus(`Created skill ${saved.name}`);
+        toast({
+          title: "Skill created",
+          description: saved.name,
+          tone: "success",
+        });
       } else {
         const saved = await api.savePrompt(name, newBody);
         const list = await api.listPrompts();
         setPrompts(list);
         setSelectedPrompt(saved.id);
         setStatus("Prompt created");
+        toast({
+          title: "Prompt created",
+          description: saved.title,
+          tone: "success",
+        });
       }
       setCreateOpen(false);
     } catch (e) {
-      if (!isDesktopRequiredError(e)) setStatus(String(e));
+      if (!isDesktopRequiredError(e)) {
+        setStatus(String(e));
+        toast({
+          title: "Create failed",
+          description: String(e),
+          tone: "error",
+        });
+      }
     } finally {
       setCreating(false);
     }
@@ -193,6 +212,11 @@ export function LibraryPanel({
         await api.saveSkill(selectedSkill, skillDesc, skillBody);
         setSkills(await api.listSkills());
         setStatus(`Saved skill ${selectedSkill}`);
+        toast({
+          title: "Skill saved",
+          description: selectedSkill,
+          tone: "success",
+        });
       } else if (tab === "prompts" && selectedPrompt) {
         const saved = await api.savePrompt(
           promptTitle,
@@ -202,10 +226,22 @@ export function LibraryPanel({
         setPrompts(await api.listPrompts());
         setSelectedPrompt(saved.id);
         setStatus("Prompt saved");
+        toast({
+          title: "Prompt saved",
+          description: saved.title,
+          tone: "success",
+        });
       }
       setDirty(false);
     } catch (e) {
-      if (!isDesktopRequiredError(e)) setStatus(String(e));
+      if (!isDesktopRequiredError(e)) {
+        setStatus(String(e));
+        toast({
+          title: "Save failed",
+          description: String(e),
+          tone: "error",
+        });
+      }
     } finally {
       setSaving(false);
     }
@@ -268,13 +304,13 @@ export function LibraryPanel({
                   description="Create one here — they persist across sessions."
                   actions={
                     <div className="flex flex-wrap justify-center gap-2">
-                      <Button size="sm" onClick={openCreate}>
+                      <Button size="xs" onClick={openCreate}>
                         <Plus className="size-3.5" />
                         {tab === "skills" ? "New skill" : "New prompt"}
                       </Button>
                       {onOpenSettings && (
                         <Button
-                          size="sm"
+                          size="xs"
                           variant="secondary"
                           onClick={onOpenSettings}
                         >
@@ -302,7 +338,7 @@ export function LibraryPanel({
                       key={s.name}
                       type="button"
                       className={cn(
-                        "flex w-full items-start gap-2 rounded-md border p-2.5 text-left transition-colors",
+                        "flex w-full items-start gap-2 rounded-md border px-2 py-2 text-left transition-colors",
                         active
                           ? "border-border bg-muted/70"
                           : "border-transparent hover:bg-muted/30",
@@ -332,7 +368,7 @@ export function LibraryPanel({
                       key={p.id}
                       type="button"
                       className={cn(
-                        "flex w-full items-start gap-2 rounded-md border p-2.5 text-left transition-colors",
+                        "flex w-full items-start gap-2 rounded-md border px-2 py-2 text-left transition-colors",
                         active
                           ? "border-border bg-muted/70"
                           : "border-transparent hover:bg-muted/30",
@@ -373,7 +409,7 @@ export function LibraryPanel({
               </div>
               <DetailPaneActions>
                 <Button
-                  size="sm"
+                  size="xs"
                   disabled={!dirty || saving}
                   onClick={() => void save()}
                 >
@@ -439,7 +475,7 @@ export function LibraryPanel({
                 title="Select an item"
                 description="Pick a skill or prompt from the list, or create a new one."
                 actions={
-                  <Button size="sm" onClick={openCreate}>
+                  <Button size="xs" onClick={openCreate}>
                     <Plus className="size-3.5" />
                     New
                   </Button>
@@ -451,13 +487,13 @@ export function LibraryPanel({
       </DetailPane>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="gap-3 p-4 sm:max-w-md">
+          <DialogHeader className="gap-1">
+            <DialogTitle className="text-base">
               {tab === "skills" ? "New skill" : "New prompt"}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 py-1">
+          <div className="space-y-2 py-0.5">
             <Input
               autoFocus
               value={newName}
@@ -479,14 +515,19 @@ export function LibraryPanel({
               placeholder={
                 tab === "skills" ? "Skill body (markdown)" : "Prompt body"
               }
-              className="min-h-32"
+              className="min-h-28"
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={() => setCreateOpen(false)}
+            >
               Cancel
             </Button>
             <Button
+              size="xs"
               disabled={creating || !newName.trim()}
               onClick={() => void createItem()}
             >

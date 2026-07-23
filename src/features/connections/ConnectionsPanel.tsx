@@ -203,9 +203,16 @@ export function ConnectionsPanel() {
       );
       setResult(page);
       openArtifact("results");
-      setStatus(`Demo ready · ${page.totalRows.toLocaleString()} orders`);
+      const msg = `Demo ready · ${page.totalRows.toLocaleString()} orders`;
+      setStatus(msg);
+      toast({ title: "Demo ready", description: msg, tone: "success" });
     } catch (e) {
       setStatus(String(e));
+      toast({
+        title: "Demo failed",
+        description: String(e),
+        tone: "error",
+      });
     }
   }
 
@@ -346,11 +353,31 @@ export function ConnectionsPanel() {
                       onClick={() =>
                         void (async () => {
                           try {
-                            if (c.connected) await api.disconnectDb(c.id);
-                            else await api.reconnectDb(c.id);
-                            await refresh();
+                            if (c.connected) {
+                              await api.disconnectDb(c.id);
+                              await refresh();
+                              toast({
+                                title: "Disconnected",
+                                description: c.name,
+                              });
+                            } else {
+                              await api.reconnectDb(c.id);
+                              await refresh();
+                              toast({
+                                title: "Connected",
+                                description: c.name,
+                                tone: "success",
+                              });
+                            }
                           } catch (e) {
                             setStatus(String(e));
+                            toast({
+                              title: c.connected
+                                ? "Disconnect failed"
+                                : "Connect failed",
+                              description: String(e),
+                              tone: "error",
+                            });
                           }
                         })()
                       }
@@ -372,8 +399,20 @@ export function ConnectionsPanel() {
                             );
                             await updateConn(next);
                             await refresh();
+                            toast({
+                              title: next.isProduction
+                                ? "Marked production"
+                                : "Marked development",
+                              description: c.name,
+                              tone: "success",
+                            });
                           } catch (e) {
                             setStatus(String(e));
+                            toast({
+                              title: "Couldn’t update connection",
+                              description: String(e),
+                              tone: "error",
+                            });
                           }
                         })()
                       }
@@ -393,13 +432,24 @@ export function ConnectionsPanel() {
                               );
                               await updateConn(next);
                               await refresh();
-                              setStatus(
-                                next.adminWritesUnlocked
-                                  ? `Admin unlocked writes on ${c.name}`
-                                  : `Re-locked writes on ${c.name}`,
-                              );
+                              const msg = next.adminWritesUnlocked
+                                ? `Admin unlocked writes on ${c.name}`
+                                : `Re-locked writes on ${c.name}`;
+                              setStatus(msg);
+                              toast({
+                                title: next.adminWritesUnlocked
+                                  ? "Writes unlocked"
+                                  : "Writes re-locked",
+                                description: c.name,
+                                tone: "success",
+                              });
                             } catch (e) {
                               setStatus(String(e));
+                              toast({
+                                title: "Couldn’t update writes",
+                                description: String(e),
+                                tone: "error",
+                              });
                             }
                           })()
                         }
@@ -421,13 +471,26 @@ export function ConnectionsPanel() {
                           ) {
                             return;
                           }
-                          if (activeConnId === c.id) {
-                            await abandonConnectionWork();
-                            setActiveConnId(null);
-                            setSchemas([]);
+                          try {
+                            if (activeConnId === c.id) {
+                              await abandonConnectionWork();
+                              setActiveConnId(null);
+                              setSchemas([]);
+                            }
+                            await api.removeConnection(c.id);
+                            await refresh();
+                            toast({
+                              title: "Connection removed",
+                              description: c.name,
+                            });
+                          } catch (e) {
+                            setStatus(String(e));
+                            toast({
+                              title: "Remove failed",
+                              description: String(e),
+                              tone: "error",
+                            });
                           }
-                          await api.removeConnection(c.id);
-                          await refresh();
                         })()
                       }
                     >

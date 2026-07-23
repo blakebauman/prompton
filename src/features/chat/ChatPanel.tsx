@@ -104,9 +104,16 @@ export function ChatPanel({
       );
       setResult(page);
       openArtifact("results");
-      setStatus(`Demo ready · ${page.totalRows.toLocaleString()} orders`);
+      const msg = `Demo ready · ${page.totalRows.toLocaleString()} orders`;
+      setStatus(msg);
+      toast({ title: "Demo ready", description: msg, tone: "success" });
     } catch (e) {
       setStatus(String(e));
+      toast({
+        title: "Demo failed",
+        description: String(e),
+        tone: "error",
+      });
     }
   }
 
