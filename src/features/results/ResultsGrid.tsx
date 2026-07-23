@@ -31,6 +31,7 @@ import {
   loadedRowCount,
   resultsToCsv,
   resultsToJson,
+  selectionToTsv,
 } from "@/lib/export-results";
 import {
   buildUpdateSql,
@@ -324,6 +325,28 @@ export function ResultsGrid() {
     }
   }
 
+  async function copySelection() {
+    if (!result || selected.size === 0) return;
+    const text = selectionToTsv(result.rows, selected);
+    if (!text) {
+      toast({ title: "Nothing to copy" });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: "Copied",
+        description:
+          selected.size === 1
+            ? "1 cell"
+            : `${selected.size} cells as TSV`,
+        tone: "success",
+      });
+    } catch {
+      toast({ title: "Couldn’t copy cells", tone: "error" });
+    }
+  }
+
   function toggleColumn(name: string) {
     setHiddenColumns((prev) => {
       const next = new Set(prev);
@@ -349,6 +372,7 @@ export function ResultsGrid() {
     col: number,
     e: React.MouseEvent,
   ) {
+    parentRef.current?.focus({ preventScroll: true });
     if (e.shiftKey && anchor) {
       const next = new Set<CellKey>();
       const r0 = Math.min(anchor.row, row);
@@ -484,7 +508,7 @@ export function ResultsGrid() {
         actions={
           <>
             <Button
-              size="sm"
+              size="xs"
               variant="outline"
               onClick={() => openArtifact("sql")}
             >
@@ -492,7 +516,7 @@ export function ResultsGrid() {
               Open SQL
             </Button>
             <Button
-              size="sm"
+              size="xs"
               variant="secondary"
               disabled={!activeConnId || running}
               onClick={() => void runSample()}
@@ -529,7 +553,7 @@ export function ResultsGrid() {
               ? ` · ${loadedRowCount(result).toLocaleString()} loaded`
               : ""}
             {selected.size > 0
-              ? ` · ${selected.size} cell${selected.size === 1 ? "" : "s"} selected`
+              ? ` · ${selected.size} cell${selected.size === 1 ? "" : "s"} selected · ⌘C copy`
               : ""}
             {canEdit ? " · double-click to edit" : ""}
           </div>
@@ -554,15 +578,38 @@ export function ResultsGrid() {
             <FileCode2 className="size-3.5" />
             SQL
           </Button>
-          <Button
-            size="xs"
-            variant="ghost"
-            disabled={!result.sql.trim()}
-            onClick={() => void copySql()}
-          >
-            <Copy className="size-3.5" />
-            Copy
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="xs"
+                variant="ghost"
+                disabled={!result.sql.trim() && selected.size === 0}
+              >
+                <Copy className="size-3.5" />
+                Copy
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-44">
+              <DropdownMenuItem
+                disabled={selected.size === 0}
+                onClick={() => void copySelection()}
+              >
+                <Copy className="size-3.5" />
+                {selected.size === 0
+                  ? "Selection"
+                  : selected.size === 1
+                    ? "Selection · 1 cell"
+                    : `Selection · ${selected.size} cells`}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={!result.sql.trim()}
+                onClick={() => void copySql()}
+              >
+                <FileCode2 className="size-3.5" />
+                SQL
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {columns.length > 1 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -678,7 +725,15 @@ export function ResultsGrid() {
       </div>
       <div
         ref={parentRef}
-        className="min-h-0 flex-1 overflow-auto font-mono text-xs"
+        className="min-h-0 flex-1 overflow-auto font-mono text-xs outline-none"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (editing) return;
+          if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "c") return;
+          if (selected.size === 0) return;
+          e.preventDefault();
+          void copySelection();
+        }}
       >
         <div
           style={{
