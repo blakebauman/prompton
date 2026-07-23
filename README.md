@@ -6,7 +6,7 @@ High-performance, native, agentic database client — conversational-first — f
 
 ## MVP features
 
-- Multi-connection workspace (PostgreSQL + SQLite)
+- Multi-connection workspace (PostgreSQL, MySQL, SQLite)
 - Activity rail: Workspace · History · Library · Settings
 - Conversational agent (Prompton) with tool calling in Rust
 - SQL editor with cancel + confirmation for mutating statements
@@ -66,7 +66,7 @@ Bundles: macOS `.app`/DMG; Linux AppImage / deb / rpm.
 ## Quick start
 
 1. Open **Settings** (rail gear) and configure a model provider (Ollama local is the default).
-2. In **Workspace**, add a Postgres/SQLite connection — or **Open demo SQLite**.
+2. In **Workspace**, add a Postgres, MySQL, or SQLite connection — or **Open demo SQLite**.
 3. Ask Prompton a question, or run SQL from the artifact pane.
 4. Browse **History** for recent queries/agent runs; edit skills/prompts in **Library**.
 
@@ -74,9 +74,9 @@ App data (connections, `history.json`, skills, prompts) lives under the OS app-d
 
 On first launch after the bundle-id rename, Prompton copies missing files from the legacy `dev.prompton.app` folder (connections, history, prompts, agent settings, demo DB, skills). Keyring secrets (API keys / DB passwords) are not copied — re-enter those in Settings / connection edit if needed.
 
-## Packaging
+## Packaging & releases
 
-macOS (this machine):
+Local macOS bundles:
 
 ```bash
 pnpm tauri build --bundles app,dmg
@@ -84,9 +84,37 @@ pnpm tauri build --bundles app,dmg
 
 Artifacts:
 - `src-tauri/target/release/bundle/macos/Prompton.app`
-- `src-tauri/target/release/bundle/dmg/Prompton_0.1.0_aarch64.dmg`
+- `src-tauri/target/release/bundle/dmg/Prompton_<version>_aarch64.dmg`
 
-Linux bundles (`deb` / `appimage` / `rpm`) are configured in `tauri.conf.json`; build them on a Linux host or CI.
+CI releases (`.github/workflows/release.yml`) build on tag push (`v*`) or `workflow_dispatch`:
+
+```bash
+pnpm run version 0.1.2   # sync package.json, Cargo.toml, Cargo.lock, tauri.conf.json
+git commit -am "Release v0.1.2"
+git tag v0.1.2
+git push origin main --tags
+```
+
+That uploads macOS + Linux artifacts, updater signatures, and `latest.json` (Settings → About → Check for updates).
+
+### Secrets
+
+| Secret | Purpose |
+| --- | --- |
+| `TAURI_SIGNING_PRIVATE_KEY` | Minisign private key for updater artifacts (required) |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password for that key |
+| `APPLE_CERTIFICATE` | Base64 `.p12` Developer ID Application cert (optional) |
+| `APPLE_CERTIFICATE_PASSWORD` | `.p12` password |
+| `APPLE_SIGNING_IDENTITY` | e.g. `Developer ID Application: …` |
+| `APPLE_ID` | Apple ID email for notarization |
+| `APPLE_PASSWORD` | [App-specific password](https://appleid.apple.com) |
+| `APPLE_TEAM_ID` | 10-character Team ID |
+
+Without the `APPLE_*` secrets, macOS builds are **ad-hoc signed** (Gatekeeper: right-click → Open, or `xattr -cr /Applications/Prompton.app`). With them present, the release job signs with Developer ID and notarizes.
+
+See [Tauri macOS signing](https://v2.tauri.app/distribute/sign/macos/).
+
+Linux bundles (`deb` / `appimage` / `rpm`) are built on Ubuntu runners.
 
 ## Architecture
 

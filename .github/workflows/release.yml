@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing tag to build and attach (e.g. v0.1.1). Leave empty to use the push tag."
+        description: "Existing tag to build and attach (e.g. v0.1.2). Leave empty to use the push tag."
         required: false
         type: string
 
@@ -105,23 +105,45 @@ jobs:
       - name: Check versions match
         run: pnpm run version:check
 
+      - name: Apple signing status
+        if: matrix.platform == 'macos-latest'
+        shell: bash
+        run: |
+          if [ -n "${{ secrets.APPLE_CERTIFICATE }}" ] && [ -n "${{ secrets.APPLE_ID }}" ]; then
+            echo "Apple Developer ID secrets present — signing + notarization enabled."
+          else
+            echo "Apple Developer ID secrets missing — ad-hoc macOS signing (Gatekeeper workaround in release notes)."
+          fi
+
       - name: Build and upload to GitHub Release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Updater artifact signatures (minisign). Required for in-app updates.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Optional Apple Developer ID + notarization (macOS only; ignored when empty).
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           tagName: ${{ steps.tag.outputs.name }}
           releaseName: Prompton ${{ steps.tag.outputs.name }}
           releaseBody: |
             Automated packaging for `${{ steps.tag.outputs.name }}`.
 
-            macOS builds are **ad-hoc signed** (not Apple notarized / Developer ID).
-            First launch: right-click the app → **Open**, or run `xattr -cr /Applications/Prompton.app`.
-            Linux is x86_64 `.deb` + AppImage. Windows packaging is deferred.
+            **Dialects:** PostgreSQL, MySQL, SQLite.
+            **Updates:** in-app updater reads `latest.json` from this release (Tauri minisign key).
 
-            In-app updates read `latest.json` from this release (signed with the updater key).
+            ### macOS
+            With `APPLE_*` repository secrets configured: Developer ID signed + notarized.
+            Without them: **ad-hoc signed** — first launch right-click → **Open**, or `xattr -cr /Applications/Prompton.app`.
+
+            ### Linux
+            x86_64 `.deb` + AppImage (+ rpm). Windows packaging is deferred.
           releaseDraft: false
           includeUpdaterJson: true
           prerelease: ${{ contains(steps.tag.outputs.name, 'alpha') || contains(steps.tag.outputs.name, 'beta') || contains(steps.tag.outputs.name, 'rc') }}

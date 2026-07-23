@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const pkgPath = join(root, "package.json");
 const cargoPath = join(root, "src-tauri/Cargo.toml");
+const lockPath = join(root, "src-tauri/Cargo.lock");
 const tauriPath = join(root, "src-tauri/tauri.conf.json");
 
 const SEMVER =
@@ -44,7 +45,21 @@ const tauri = JSON.parse(readFileSync(tauriPath, "utf8"));
 tauri.version = version;
 writeFileSync(tauriPath, `${JSON.stringify(tauri, null, 2)}\n`);
 
+// Keep the workspace package entry in Cargo.lock aligned (CI version checks
+// don't read the lockfile, but release builds should not drift).
+let lock = readFileSync(lockPath, "utf8");
+const nextLock = lock.replace(
+  /(\[\[package\]\]\nname = "prompton"\n)version = "[^"]*"/,
+  `$1version = "${version}"`,
+);
+if (nextLock === lock) {
+  console.error("Failed to patch version in Cargo.lock (prompton package)");
+  process.exit(1);
+}
+writeFileSync(lockPath, nextLock);
+
 console.log(`version → ${version}`);
 console.log(`  ${pkgPath}`);
 console.log(`  ${cargoPath}`);
+console.log(`  ${lockPath}`);
 console.log(`  ${tauriPath}`);
