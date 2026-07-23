@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { BarChart3, ChartLine } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { BarChart3, ChartColumn, ChartLine, Table2 } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -10,6 +10,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { useArtifact } from "@/components/artifact/artifact-context";
 import {
   ChartContainer,
   ChartLegend,
@@ -40,9 +41,15 @@ const SERIES_COLORS = [
   "var(--chart-5)",
 ];
 
+const POINT_CAP = 100;
+
 function isNumericCell(value: unknown): boolean {
   if (typeof value === "number" && Number.isFinite(value)) return true;
-  if (typeof value === "string" && value.trim() !== "" && !Number.isNaN(Number(value))) {
+  if (
+    typeof value === "string" &&
+    value.trim() !== "" &&
+    !Number.isNaN(Number(value))
+  ) {
     return true;
   }
   return false;
@@ -60,6 +67,7 @@ function toNumber(value: unknown): number | null {
 /** Chart query result columns — bar/line over loaded rows. */
 export function ResultsChart() {
   const { result } = useWorkspace();
+  const { open: openArtifact } = useArtifact();
   const [chartKind, setChartKind] = useState<ChartKind>("bar");
   const [categoryCol, setCategoryCol] = useState<string>("");
   const [valueCols, setValueCols] = useState<string[]>([]);
@@ -67,15 +75,20 @@ export function ResultsChart() {
   const columns = result?.columns ?? [];
   const rows = result?.rows ?? [];
 
+  useEffect(() => {
+    setCategoryCol("");
+    setValueCols([]);
+    setChartKind("bar");
+  }, [result?.queryId]);
+
   const inferred = useMemo(() => {
     if (!result || columns.length === 0 || rows.length === 0) {
       return { category: "", values: [] as string[] };
     }
+    const sample = rows.slice(0, Math.min(rows.length, 40));
     const numericIdx = columns
       .map((c, i) => ({ name: c.name, i }))
-      .filter(({ i }) =>
-        rows.slice(0, Math.min(rows.length, 40)).some((r) => isNumericCell(r[i])),
-      );
+      .filter(({ i }) => sample.some((r) => isNumericCell(r[i])));
     const nonNumeric = columns.filter(
       (c) => !numericIdx.some((n) => n.name === c.name),
     );
@@ -88,8 +101,7 @@ export function ResultsChart() {
   }, [result, columns, rows]);
 
   const activeCategory = categoryCol || inferred.category;
-  const activeValues =
-    valueCols.length > 0 ? valueCols : inferred.values;
+  const activeValues = valueCols.length > 0 ? valueCols : inferred.values;
 
   const chartData = useMemo(() => {
     if (!result || !activeCategory || activeValues.length === 0) return [];
@@ -99,7 +111,7 @@ export function ResultsChart() {
     );
     if (catIdx < 0 || valIdx.some((i) => i < 0)) return [];
 
-    const limit = Math.min(rows.length, 100);
+    const limit = Math.min(rows.length, POINT_CAP);
     return rows.slice(0, limit).map((row, rowIndex) => {
       const point: Record<string, string | number> = {
         label: String(row[catIdx] ?? `#${rowIndex + 1}`),
@@ -142,8 +154,16 @@ export function ResultsChart() {
   if (!result) {
     return (
       <EmptyState
+        dashed
+        className="min-h-40 p-4"
+        icon={<ChartColumn className="size-8" />}
         title="No results to chart"
         description="Run a query with at least one numeric column, then open Chart."
+        actions={
+          <Button size="xs" variant="outline" onClick={() => openArtifact("sql")}>
+            Open SQL
+          </Button>
+        }
       />
     );
   }
@@ -151,81 +171,135 @@ export function ResultsChart() {
   if (inferred.values.length === 0) {
     return (
       <EmptyState
+        dashed
+        className="min-h-40 p-4"
+        icon={<ChartColumn className="size-8" />}
         title="No numeric columns"
         description="Charts need numeric values in the loaded result set."
+        actions={
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={() => openArtifact("results")}
+          >
+            <Table2 className="size-3.5" />
+            Open Results
+          </Button>
+        }
       />
     );
   }
 
   const ChartImpl = chartKind === "line" ? LineChart : BarChart;
+  const truncated = rows.length > POINT_CAP;
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-9 shrink-0 flex-wrap items-center gap-1.5 border-b border-border/60 px-2">
-        <div className="flex items-center gap-0.5">
+      <div className="flex min-h-9 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-2 py-1">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+          <div className="flex items-center gap-0.5">
+            <Button
+              size="xs"
+              variant={chartKind === "bar" ? "secondary" : "ghost"}
+              aria-pressed={chartKind === "bar"}
+              onClick={() => setChartKind("bar")}
+            >
+              <BarChart3 className="size-3.5" />
+              Bar
+            </Button>
+            <Button
+              size="xs"
+              variant={chartKind === "line" ? "secondary" : "ghost"}
+              aria-pressed={chartKind === "line"}
+              onClick={() => setChartKind("line")}
+            >
+              <ChartLine className="size-3.5" />
+              Line
+            </Button>
+          </div>
+          <span aria-hidden className="text-border">
+            |
+          </span>
+          <div className="flex items-center gap-1">
+            <span className="hidden text-[10px] tracking-wide text-muted-foreground uppercase sm:inline">
+              X
+            </span>
+            <Select
+              value={activeCategory}
+              onValueChange={(v) => setCategoryCol(v)}
+            >
+              <SelectTrigger size="sm" className="w-[128px]">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {columns.map((c) => (
+                  <SelectItem key={c.name} value={c.name}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="hidden text-[10px] tracking-wide text-muted-foreground uppercase sm:inline">
+              Y
+            </span>
+            <MultiSelect
+              className="h-7 max-w-[180px] min-w-[120px]"
+              options={seriesOptions}
+              value={activeValues}
+              onChange={(next) => setValueCols(next.slice(0, 5))}
+              placeholder="Series…"
+            />
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <span className="hidden px-1 text-[11px] text-muted-foreground tabular-nums @min-[420px]:inline">
+            {chartData.length.toLocaleString()} pts
+            {truncated ? ` · first ${POINT_CAP}` : ""}
+          </span>
           <Button
             size="xs"
-            variant={chartKind === "bar" ? "secondary" : "ghost"}
-            onClick={() => setChartKind("bar")}
+            variant="ghost"
+            onClick={() => openArtifact("results")}
           >
-            <BarChart3 className="size-3.5" />
-            Bar
-          </Button>
-          <Button
-            size="xs"
-            variant={chartKind === "line" ? "secondary" : "ghost"}
-            onClick={() => setChartKind("line")}
-          >
-            <ChartLine className="size-3.5" />
-            Line
+            <Table2 className="size-3.5" />
+            Results
           </Button>
         </div>
-        <Select
-          value={activeCategory}
-          onValueChange={(v) => setCategoryCol(v)}
-        >
-          <SelectTrigger size="sm" className="w-[140px]">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            {columns.map((c) => (
-              <SelectItem key={c.name} value={c.name}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <MultiSelect
-          className="max-w-[200px]"
-          options={seriesOptions}
-          value={activeValues}
-          onChange={(next) => setValueCols(next.slice(0, 5))}
-          placeholder="Series…"
-        />
-        <span className="ml-auto text-[11px] text-muted-foreground">
-          {chartData.length} points
-          {rows.length > 100 ? " · first 100 loaded" : ""}
-        </span>
       </div>
 
-      <div className="min-h-0 flex-1 p-3">
+      <div className="min-h-0 flex-1 p-2.5">
         {activeValues.length === 0 || chartData.length === 0 ? (
           <EmptyState
+            className="min-h-40 p-4"
             title="Pick a series"
-            description="Select one or more numeric columns to plot."
+            description="Select one or more numeric columns to plot on Y."
           />
         ) : (
-          <ChartContainer config={chartConfig} className="h-full w-full aspect-auto">
-            <ChartImpl data={chartData} margin={{ left: 8, right: 8, top: 8 }}>
+          <ChartContainer
+            config={chartConfig}
+            className="h-full w-full aspect-auto [&_.recharts-cartesian-grid-horizontal_line]:stroke-border/50 [&_.recharts-cartesian-grid-vertical_line]:stroke-border/40"
+          >
+            <ChartImpl
+              data={chartData}
+              margin={{ left: 4, right: 8, top: 8, bottom: 0 }}
+            >
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis
                 dataKey="label"
                 tickLine={false}
                 axisLine={false}
-                tickMargin={8}
-                minTickGap={24}
+                tickMargin={6}
+                minTickGap={28}
+                tick={{ fontSize: 11 }}
               />
-              <YAxis tickLine={false} axisLine={false} width={48} />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                width={44}
+                tick={{ fontSize: 11 }}
+              />
               <ChartTooltip content={<ChartTooltipContent />} />
               <ChartLegend content={<ChartLegendContent />} />
               {activeValues.map((name) =>
@@ -237,13 +311,15 @@ export function ResultsChart() {
                     stroke={`var(--color-${name})`}
                     strokeWidth={2}
                     dot={false}
+                    isAnimationActive={false}
                   />
                 ) : (
                   <Bar
                     key={name}
                     dataKey={name}
                     fill={`var(--color-${name})`}
-                    radius={3}
+                    radius={[2, 2, 0, 0]}
+                    isAnimationActive={false}
                   />
                 ),
               )}

@@ -53,7 +53,7 @@ function OpenArtifactPane() {
 
   return (
     <aside className="@container flex h-full w-full flex-col overflow-hidden border-l border-border/60 bg-muted/30">
-      <header className="flex h-10 shrink-0 items-stretch justify-between gap-1 border-b border-border/60 px-1">
+      <header className="flex h-9 shrink-0 items-stretch justify-between gap-1 border-b border-border/60 px-1">
         <UnderlineTabs>
           {SWITCHABLE.map(({ kind, label, icon: Icon }) => {
             const selected = artifact.kind === kind;
@@ -66,10 +66,10 @@ function OpenArtifactPane() {
                 }}
                 aria-label={label}
                 title={label}
-                className="px-2"
+                className="h-9 gap-1 px-1.5 @min-[520px]:px-2"
               >
                 <Icon className="size-3.5 opacity-80" />
-                <span>{label}</span>
+                <span className="hidden @min-[520px]:inline">{label}</span>
               </UnderlineTab>
             );
           })}
