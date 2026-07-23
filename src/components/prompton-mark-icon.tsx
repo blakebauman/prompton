@@ -5,8 +5,8 @@ type PromptonMarkIconProps = {
 };
 
 /**
- * Prompton mark: database cylinder + terminal prompt (`>` + cursor).
- * Uses currentColor so it follows the surrounding chrome.
+ * Prompton mark: database + terminal prompt `>_`
+ * (chevron and underscore cursor, spaced so it won't read as a flame).
  */
 export function PromptonMarkIcon({ className }: PromptonMarkIconProps) {
   return (
@@ -17,41 +17,39 @@ export function PromptonMarkIcon({ className }: PromptonMarkIconProps) {
       className={cn("size-3.5", className)}
       aria-hidden
     >
-      {/* Cylinder — left half */}
       <ellipse
-        cx="8"
-        cy="6.25"
-        rx="4.25"
-        ry="1.9"
+        cx="7.5"
+        cy="6.5"
+        rx="4"
+        ry="1.85"
         stroke="currentColor"
-        strokeWidth="1.6"
+        strokeWidth="1.55"
       />
       <path
-        d="M3.75 6.25v9c0 1.05 1.9 1.9 4.25 1.9s4.25-.85 4.25-1.9v-9"
+        d="M3.5 6.5v8.75c0 1 1.8 1.85 4 1.85s4-.85 4-1.85V6.5"
         stroke="currentColor"
-        strokeWidth="1.6"
+        strokeWidth="1.55"
         strokeLinejoin="round"
       />
       <path
-        d="M3.75 10.75c0 1.05 1.9 1.9 4.25 1.9s4.25-.85 4.25-1.9"
+        d="M3.5 10.85c0 1 1.8 1.85 4 1.85s4-.85 4-1.85"
         stroke="currentColor"
-        strokeWidth="1.6"
+        strokeWidth="1.55"
       />
-      {/* Prompt: chevron, then cursor block (clear gap from cylinder) */}
+      {/* `>` */}
       <path
-        d="M14.25 9.25 17.5 12 14.25 14.75"
+        d="M14 8.75 17.75 12 14 15.25"
         stroke="currentColor"
-        strokeWidth="1.7"
+        strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <rect
-        x="19"
-        y="10.35"
-        width="1.65"
-        height="3.3"
-        rx="0.35"
-        fill="currentColor"
+      {/* `_` cursor — reads as terminal, not a flame tip */}
+      <path
+        d="M19.1 15.1h3.2"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
       />
     </svg>
   );

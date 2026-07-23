@@ -1,32 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none">
   <rect width="1024" height="1024" rx="224" fill="#171717"/>
-  <!-- Database cylinder (left) -->
-  <ellipse cx="360" cy="300" rx="180" ry="78" stroke="#FAFAFA" stroke-width="48"/>
+  <ellipse cx="340" cy="300" rx="170" ry="74" stroke="#FAFAFA" stroke-width="48"/>
   <path
-    d="M180 300v360c0 43 80.5 78 180 78s180-35 180-78V300"
+    d="M170 300v360c0 41 76 74 170 74s170-33 170-74V300"
     stroke="#FAFAFA"
     stroke-width="48"
     stroke-linejoin="round"
   />
   <path
-    d="M180 480c0 43 80.5 78 180 78s180-35 180-78"
+    d="M170 480c0 41 76 74 170 74s170-33 170-74"
     stroke="#FAFAFA"
     stroke-width="48"
   />
-  <!-- Terminal prompt: chevron + cursor block -->
+  <!-- Prompt chevron -->
   <path
-    d="M600 360 L760 512 L600 664"
+    d="M580 340 L780 512 L580 684"
     stroke="#FAFAFA"
-    stroke-width="56"
+    stroke-width="64"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
-  <rect
-    x="800"
-    y="432"
-    width="72"
-    height="160"
-    rx="16"
-    fill="#FAFAFA"
+  <!-- Underscore cursor -->
+  <path
+    d="M820 680 H960"
+    stroke="#FAFAFA"
+    stroke-width="72"
+    stroke-linecap="round"
   />
 </svg>
