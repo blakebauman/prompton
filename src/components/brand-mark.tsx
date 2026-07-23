@@ -17,6 +17,8 @@ export function BrandMark({
   wordmark = true,
   size = "md",
 }: BrandMarkProps) {
+  const shell = size === "sm" ? "size-8" : "size-9";
+  const icon = size === "sm" ? "size-4" : "size-5";
   const name = size === "sm" ? "text-sm" : "text-base";
 
   return (
@@ -24,10 +26,13 @@ export function BrandMark({
       className={cn("inline-flex min-w-0 items-center gap-2", className)}
     >
       <span
-        className="flex size-7 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/40 text-foreground"
+        className={cn(
+          "flex shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/40 text-foreground",
+          shell,
+        )}
         aria-hidden
       >
-        <PromptonMarkIcon className="size-3.5" />
+        <PromptonMarkIcon className={icon} />
       </span>
       {wordmark && (
         <span className={cn("font-semibold tracking-tight", name)}>
