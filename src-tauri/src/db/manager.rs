@@ -368,6 +368,46 @@ impl ConnectionManager {
         self.execute_query(req).await
     }
 
+    /// Drop expired staged writes. Returns how many were removed.
+    pub fn purge_expired_pending_writes(&self) -> usize {
+        let mut map = self.pending_writes.write();
+        let before = map.len();
+        map.retain(|_, p| !p.is_expired());
+        before.saturating_sub(map.len())
+    }
+
+    pub fn discard_pending_write(&self, confirmation_id: Uuid) -> bool {
+        self.pending_writes.write().remove(&confirmation_id).is_some()
+    }
+
+    /// Discard every staged write for a connection (switch / remove / abandon).
+    pub fn discard_pending_for_conn(&self, conn_id: Uuid) -> usize {
+        let mut map = self.pending_writes.write();
+        let before = map.len();
+        map.retain(|_, p| p.conn_id != conn_id);
+        before.saturating_sub(map.len())
+    }
+
+    /// Discard staged writes bound to an agent session.
+    pub fn discard_pending_for_session(&self, session_id: Uuid) -> usize {
+        let mut map = self.pending_writes.write();
+        let before = map.len();
+        map.retain(|_, p| p.session_id != Some(session_id));
+        before.saturating_sub(map.len())
+    }
+
+    #[cfg(test)]
+    pub fn backdate_pending_for_test(&self, confirmation_id: Uuid, secs_ago: i64) {
+        if let Some(p) = self.pending_writes.write().get_mut(&confirmation_id) {
+            p.created_at = chrono::Utc::now() - chrono::Duration::seconds(secs_ago);
+        }
+    }
+
+    #[cfg(test)]
+    pub fn pending_write_count(&self) -> usize {
+        self.pending_writes.read().len()
+    }
+
     /// Stage a mutating statement for HITL. Does not execute.
     pub fn request_write_approval(
         &self,
@@ -379,6 +419,14 @@ impl ConnectionManager {
             return Err(AppError::msg(
                 "Only mutating SQL (INSERT/UPDATE/DELETE/DDL) can be staged for approval",
             ));
+        }
+        self.purge_expired_pending_writes();
+        // One outstanding stage per agent session, or per connection for editor writes.
+        if let Some(sid) = session_id {
+            self.discard_pending_for_session(sid);
+        } else {
+            let mut map = self.pending_writes.write();
+            map.retain(|_, p| !(p.conn_id == conn_id && p.session_id.is_none()));
         }
         // Ensure connection exists (config or live).
         let cfg = self
@@ -407,6 +455,7 @@ impl ConnectionManager {
             is_production,
             session_id,
             admin_writes_unlocked,
+            created_at: chrono::Utc::now(),
         };
         self.pending_writes
             .write()
@@ -421,11 +470,18 @@ impl ConnectionManager {
         approved: bool,
         query_id: Option<Uuid>,
     ) -> AppResult<Option<QueryPage>> {
+        self.purge_expired_pending_writes();
         let pending = self
             .pending_writes
             .write()
             .remove(&confirmation_id)
             .ok_or_else(|| AppError::msg("Write confirmation not found or already resolved"))?;
+
+        if pending.is_expired() {
+            return Err(AppError::msg(
+                "Write confirmation expired. Stage the statement again.",
+            ));
+        }
 
         if !approved {
             return Ok(None);

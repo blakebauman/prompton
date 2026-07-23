@@ -57,6 +57,11 @@ export function SqlEditor() {
   const statementCount = splitSqlStatements(sql).length;
   const mutating = isMutatingSql(sql);
 
+  // Connection switch / abandon discards backend stages — drop the local dialog too.
+  useEffect(() => {
+    setPending(null);
+  }, [activeConnId]);
+
   async function executeRead() {
     if (!activeConnId) {
       setStatus("Select a connection first");

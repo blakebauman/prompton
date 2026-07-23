@@ -13,12 +13,23 @@ import { useWorkspace } from "@/stores/workspace";
 
 async function cancelInflightWork() {
   const s = useWorkspace.getState();
+  const pendingId = s.pendingConfirm?.confirmationId ?? null;
   if (s.sessionId) {
     try {
       await api.agentCancel(s.sessionId);
     } catch {
       /* ignore */
     }
+  }
+  // Drop staged HITL writes for this connection / confirmation (SQL editor + leftovers).
+  try {
+    await api.discardPendingWrite({
+      confirmationId: pendingId,
+      connId: s.activeConnId,
+      sessionId: s.sessionId,
+    });
+  } catch {
+    /* ignore */
   }
   if (s.running && s.activeQueryId) {
     try {
@@ -27,6 +38,7 @@ async function cancelInflightWork() {
       /* ignore */
     }
   }
+  useWorkspace.getState().setPendingConfirm(null);
 }
 
 /**

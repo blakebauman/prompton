@@ -377,7 +377,15 @@ export function ChatPanel({
     );
 
   function stopAgent() {
-    if (sessionId) void api.agentCancel(sessionId);
+    if (sessionId) {
+      void api.agentCancel(sessionId).catch(() => {});
+    }
+    if (pendingConfirm?.confirmationId) {
+      void api
+        .discardPendingWrite({ confirmationId: pendingConfirm.confirmationId })
+        .catch(() => {});
+    }
+    setPendingConfirm(null);
     finalizeRunningTools("output-denied");
     setAgentBusy(false);
     setStatus("Agent cancelled");
@@ -404,7 +412,18 @@ export function ChatPanel({
               variant="ghost"
               disabled={agentBusy}
               onClick={() => {
-                if (sessionId) void api.agentCancel(sessionId);
+                if (sessionId) {
+                  void api.agentCancel(sessionId).catch(() => {});
+                }
+                if (pendingConfirm?.confirmationId) {
+                  void api
+                    .discardPendingWrite({
+                      confirmationId: pendingConfirm.confirmationId,
+                      sessionId,
+                    })
+                    .catch(() => {});
+                }
+                setPendingConfirm(null);
                 clearChat();
                 setStatus("New chat");
                 toast({ title: "Chat cleared" });

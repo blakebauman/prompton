@@ -214,6 +214,66 @@ async fn production_writes_require_hitl() {
 }
 
 #[tokio::test]
+async fn pending_write_expires_and_discard_clears() {
+    use crate::db::types::PENDING_WRITE_TTL_SECS;
+
+    let dir = std::env::temp_dir().join(format!("prompton-ttl-{}", uuid::Uuid::new_v4()));
+    let _ = std::fs::create_dir_all(&dir);
+    let db_path = dir.join("t.db");
+    let mgr = ConnectionManager::new(PathBuf::from(&dir));
+
+    let info = mgr
+        .connect(ConnectRequest {
+            name: "t".into(),
+            dialect: Dialect::Sqlite,
+            host: None,
+            port: None,
+            database: None,
+            username: None,
+            password: None,
+            file_path: Some(db_path.display().to_string()),
+            color: Some("#000".into()),
+            ssl_mode: None,
+            is_production: Some(false),
+        })
+        .await
+        .expect("connect");
+
+    mgr.run_query_trusted(RunQueryRequest {
+        conn_id: info.id,
+        sql: "CREATE TABLE t(id INTEGER)".into(),
+        page_size: 10,
+        query_id: None,
+    })
+    .await
+    .unwrap();
+
+    let pending = mgr
+        .request_write_approval(info.id, "INSERT INTO t VALUES (1)".into(), None)
+        .unwrap();
+    assert_eq!(mgr.pending_write_count(), 1);
+
+    mgr.backdate_pending_for_test(pending.confirmation_id, PENDING_WRITE_TTL_SECS + 5);
+    let expired = mgr
+        .confirm_write(pending.confirmation_id, true, None)
+        .await;
+    assert!(expired.is_err());
+    assert_eq!(mgr.pending_write_count(), 0);
+
+    let pending2 = mgr
+        .request_write_approval(info.id, "INSERT INTO t VALUES (2)".into(), None)
+        .unwrap();
+    assert_eq!(mgr.discard_pending_for_conn(info.id), 1);
+    assert_eq!(mgr.pending_write_count(), 0);
+    let gone = mgr
+        .confirm_write(pending2.confirmation_id, true, None)
+        .await;
+    assert!(gone.is_err());
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[tokio::test]
 async fn multi_statement_write_requires_hitl() {
     let dir = std::env::temp_dir().join(format!("prompton-multi-{}", uuid::Uuid::new_v4()));
     let _ = std::fs::create_dir_all(&dir);

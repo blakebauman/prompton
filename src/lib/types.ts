@@ -104,6 +104,7 @@ export interface PendingConfirmation {
   isProduction: boolean;
   adminWritesUnlocked?: boolean;
   toolCallId?: string;
+  createdAt?: string;
 }
 
 export interface AgentSettings {

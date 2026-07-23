@@ -122,6 +122,16 @@ export const api = {
   }) => invoke<string>("agent_chat", { request }),
   agentCancel: (sessionId: string) =>
     invoke<void>("agent_cancel", { sessionId }),
+  discardPendingWrite: (args?: {
+    confirmationId?: string | null;
+    connId?: string | null;
+    sessionId?: string | null;
+  }) =>
+    invoke<number>("discard_pending_write", {
+      confirmationId: args?.confirmationId ?? null,
+      connId: args?.connId ?? null,
+      sessionId: args?.sessionId ?? null,
+    }),
   agentConfirm: (confirmationId: string, approved: boolean) =>
     invoke<void>("agent_confirm", {
       confirmationId,

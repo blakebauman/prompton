@@ -49,6 +49,7 @@ pub fn run() {
             commands::run_query,
             commands::request_write_approval,
             commands::confirm_write,
+            commands::discard_pending_write,
             commands::set_connection_production,
             commands::set_admin_writes_unlocked,
             commands::cancel_query,

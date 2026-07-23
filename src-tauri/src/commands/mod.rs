@@ -205,7 +205,35 @@ pub async fn agent_chat(
 
 #[tauri::command]
 pub fn agent_cancel(state: State<'_, AppState>, session_id: Uuid) {
-    state.agent.cancel(session_id);
+    state
+        .agent
+        .cancel_and_discard_pending(session_id, &state.db);
+}
+
+#[tauri::command]
+pub fn discard_pending_write(
+    state: State<'_, AppState>,
+    confirmation_id: Option<Uuid>,
+    conn_id: Option<Uuid>,
+    session_id: Option<Uuid>,
+) -> AppResult<usize> {
+    state.db.purge_expired_pending_writes();
+    let mut n = 0usize;
+    if let Some(id) = confirmation_id {
+        if state.db.discard_pending_write(id) {
+            n += 1;
+        }
+        // Agent-side pending may share the same id.
+        state.agent.discard_pending_id(id);
+    }
+    if let Some(id) = conn_id {
+        n += state.db.discard_pending_for_conn(id);
+    }
+    if let Some(id) = session_id {
+        n += state.db.discard_pending_for_session(id);
+        n += state.agent.discard_pending_for_session(id);
+    }
+    Ok(n)
 }
 
 #[tauri::command]

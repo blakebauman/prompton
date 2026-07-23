@@ -170,6 +170,39 @@ impl AgentRuntime {
         }
     }
 
+    pub fn discard_pending_id(&self, confirmation_id: Uuid) -> bool {
+        self.pending.write().remove(&confirmation_id).is_some()
+    }
+
+    pub fn discard_pending_for_session(&self, session_id: Uuid) -> usize {
+        let mut pending = self.pending.write();
+        let before = pending.len();
+        pending.retain(|_, p| p.session_id != session_id);
+        before.saturating_sub(pending.len())
+    }
+
+    /// Cancel the session and drop any HITL pending writes for it.
+    pub fn cancel_and_discard_pending(&self, session_id: Uuid, db: &ConnectionManager) {
+        self.cancel(session_id);
+        let ids: Vec<Uuid> = self
+            .pending
+            .read()
+            .iter()
+            .filter(|(_, p)| p.session_id == session_id)
+            .map(|(id, _)| *id)
+            .collect();
+        {
+            let mut pending = self.pending.write();
+            for id in &ids {
+                pending.remove(id);
+            }
+        }
+        for id in ids {
+            let _ = db.discard_pending_write(id);
+        }
+        let _ = db.discard_pending_for_session(session_id);
+    }
+
     fn tool_specs() -> Vec<ToolSpec> {
         vec![
             ToolSpec {
@@ -651,7 +684,9 @@ impl AgentRuntime {
             .pending
             .write()
             .remove(&confirmation_id)
-            .ok_or_else(|| AppError::msg("Confirmation not found"))?;
+            .ok_or_else(|| {
+                AppError::msg("Confirmation not found or already discarded")
+            })?;
 
         let tool_call_id = if pending.tool_call_id.is_empty() {
             confirmation_id.to_string()
@@ -664,15 +699,22 @@ impl AgentRuntime {
             "User rejected the write. Do not retry unless the user explicitly asks again."
                 .to_string()
         } else {
-            let page = db
-                .confirm_write(confirmation_id, true, None)
-                .await?
-                .ok_or_else(|| AppError::msg("Approved write returned no result"))?;
-            let _ = app.emit("query:result", &page);
-            format!(
-                "Executed after HITL approval. rows={}, affected={:?}, durationMs={}",
-                page.total_rows, page.affected_rows, page.duration_ms
-            )
+            match db.confirm_write(confirmation_id, true, None).await {
+                Ok(Some(page)) => {
+                    let _ = app.emit("query:result", &page);
+                    format!(
+                        "Executed after HITL approval. rows={}, affected={:?}, durationMs={}",
+                        page.total_rows, page.affected_rows, page.duration_ms
+                    )
+                }
+                Ok(None) => {
+                    "Write confirmation was resolved without a result.".to_string()
+                }
+                Err(e) => {
+                    // Expired / discarded after the UI still showed the dialog.
+                    format!("Write could not be executed: {e}")
+                }
+            }
         };
 
         let _ = app.emit(

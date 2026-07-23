@@ -64,6 +64,9 @@ pub struct ConnectRequest {
     pub is_production: Option<bool>,
 }
 
+/// How long a staged write may wait for HITL before it is discarded.
+pub const PENDING_WRITE_TTL_SECS: i64 = 10 * 60;
+
 /// A write that is staged until a human approves or rejects it.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -78,6 +81,20 @@ pub struct PendingWrite {
     /// True when an admin has unlocked writes on this production connection.
     #[serde(default)]
     pub admin_writes_unlocked: bool,
+    /// When this write was staged (UTC).
+    #[serde(default = "utc_now")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+fn utc_now() -> chrono::DateTime<chrono::Utc> {
+    chrono::Utc::now()
+}
+
+impl PendingWrite {
+    pub fn is_expired(&self) -> bool {
+        let age = chrono::Utc::now() - self.created_at;
+        age > chrono::Duration::seconds(PENDING_WRITE_TTL_SECS)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
