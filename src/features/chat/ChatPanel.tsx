@@ -64,10 +64,19 @@ import type { ChatMessage, PendingConfirmation, QueryPage } from "@/lib/types";
 import { useWorkspace } from "@/stores/workspace";
 
 const SUGGESTIONS = [
-  "What tables and schemas are available?",
-  "Sample the widest table safely",
-  "Draft a SELECT with LIMIT and explain it",
-];
+  {
+    label: "List tables",
+    prompt: "What tables and schemas are available?",
+  },
+  {
+    label: "Sample a table",
+    prompt: "Sample the widest table safely",
+  },
+  {
+    label: "Draft SELECT + explain",
+    prompt: "Draft a SELECT with LIMIT and explain it",
+  },
+] as const;
 
 /** Database assistant panel (natural language → schema/SQL tools). */
 export function AssistantPanel({
@@ -548,10 +557,24 @@ export function AssistantPanel({
             </div>
           ) : showEmpty ? (
             <ConversationEmptyState
-              icon={<BrandMark wordmark={false} size="md" className="opacity-70" />}
+              icon={
+                <BrandMark wordmark={false} size="md" className="opacity-70" />
+              }
               title="Ask Prompton"
-              description="Schema, samples, EXPLAIN, and safe SELECTs — with writes gated for approval."
-            />
+              description="Schema, samples, EXPLAIN, and safe SELECTs — writes pause for approval."
+            >
+              <Suggestions className="mt-1 max-w-md">
+                {SUGGESTIONS.map((s) => (
+                  <Suggestion
+                    key={s.label}
+                    suggestion={s.prompt}
+                    onClick={(value) => void send(value)}
+                  >
+                    {s.label}
+                  </Suggestion>
+                ))}
+              </Suggestions>
+            </ConversationEmptyState>
           ) : (
             messages.map((m) => (
               <ChatBubble key={m.id} message={m} streaming={agentBusy} />
@@ -585,17 +608,6 @@ export function AssistantPanel({
             title="Production writes need approval"
             description="Mutating SQL pauses for your approval. Admin unlock is not required."
           />
-        )}
-        {activeConnId && showEmpty && (
-          <Suggestions className="px-0.5">
-            {SUGGESTIONS.map((s) => (
-              <Suggestion
-                key={s}
-                suggestion={s}
-                onClick={(value) => void send(value)}
-              />
-            ))}
-          </Suggestions>
         )}
         <PromptInput
           frosted

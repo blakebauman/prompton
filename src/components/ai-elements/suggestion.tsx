@@ -12,7 +12,10 @@ export const Suggestions = ({
   ...props
 }: SuggestionsProps) => (
   <div
-    className={cn("flex flex-wrap items-center gap-1.5", className)}
+    className={cn(
+      "flex flex-wrap items-center justify-center gap-1.5",
+      className,
+    )}
     {...props}
   >
     {children}
@@ -28,7 +31,7 @@ export const Suggestion = ({
   suggestion,
   onClick,
   className,
-  variant = "outline",
+  variant = "secondary",
   size = "xs",
   children,
   ...props
@@ -40,13 +43,14 @@ export const Suggestion = ({
   return (
     <Button
       className={cn(
-        "cursor-pointer font-normal text-muted-foreground",
+        "h-7 max-w-full cursor-pointer truncate px-2.5 text-[11px] font-normal text-muted-foreground",
         className,
       )}
       onClick={handleClick}
       size={size}
       type="button"
       variant={variant}
+      title={suggestion}
       {...props}
     >
       {children || suggestion}
