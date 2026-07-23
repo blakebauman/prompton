@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Bump package.json (SoT), Cargo.toml, and tauri.conf.json together.
+ * Bump package.json (SoT), Cargo.toml, Cargo.lock, tauri.conf.json, and
+ * src/lib/app-version.ts together.
  * Usage: pnpm run version 0.1.1
  */
 import { readFileSync, writeFileSync } from "node:fs";
@@ -12,6 +13,7 @@ const pkgPath = join(root, "package.json");
 const cargoPath = join(root, "src-tauri/Cargo.toml");
 const lockPath = join(root, "src-tauri/Cargo.lock");
 const tauriPath = join(root, "src-tauri/tauri.conf.json");
+const appVersionPath = join(root, "src/lib/app-version.ts");
 
 const SEMVER =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
@@ -58,8 +60,20 @@ if (nextLock === lock) {
 }
 writeFileSync(lockPath, nextLock);
 
+writeFileSync(
+  appVersionPath,
+  `/**
+ * App semver shown in Settings / rail. Kept in sync by \`pnpm run version\`.
+ * Prefer Tauri \`getVersion()\` at runtime when available; this is the fallback
+ * and the value baked for Vite/browser shells.
+ */
+export const APP_VERSION = "${version}";
+`,
+);
+
 console.log(`version → ${version}`);
 console.log(`  ${pkgPath}`);
 console.log(`  ${cargoPath}`);
 console.log(`  ${lockPath}`);
 console.log(`  ${tauriPath}`);
+console.log(`  ${appVersionPath}`);

@@ -8,6 +8,7 @@ import {
 
 import { BrandMark } from "@/components/brand-mark";
 import { DragRegion } from "@/components/titlebar-drag-region";
+import { APP_VERSION } from "@/lib/app-version";
 import { cn } from "@/lib/utils";
 
 export type ActivityId = "workspace" | "history" | "library" | "settings";
@@ -92,8 +93,11 @@ export function ActivityRail({
         })}
       </div>
 
-      <span className="mt-auto pb-2 text-[10px] text-muted-foreground/50">
-        v0.1
+      <span
+        className="mt-auto pb-2 text-[10px] tabular-nums text-muted-foreground/50"
+        title={`Prompton v${APP_VERSION}`}
+      >
+        v{APP_VERSION}
       </span>
     </nav>
   );

@@ -42,8 +42,8 @@ export function SettingRow({
   children?: ReactNode;
 }) {
   return (
-    <div className="py-2.5">
-      <div className="flex items-center justify-between gap-4">
+    <div className="py-2">
+      <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <Label
             htmlFor={htmlFor}
@@ -52,14 +52,14 @@ export function SettingRow({
             {title}
           </Label>
           {description && (
-            <p className="mt-1 text-[11px] leading-snug text-muted-foreground text-pretty">
+            <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground text-pretty">
               {description}
             </p>
           )}
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </div>
-      {children && <div className="mt-2">{children}</div>}
+      {children && <div className="mt-1.5">{children}</div>}
     </div>
   );
 }

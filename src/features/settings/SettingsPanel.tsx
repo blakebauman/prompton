@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ShortcutsSettings } from "@/features/settings/ShortcutsSettings";
 import { UpdatesSettings } from "@/features/settings/UpdatesSettings";
 import { toast } from "@/hooks/use-toast";
+import { APP_VERSION } from "@/lib/app-version";
 import { api, isDesktopRequiredError } from "@/lib/tauri";
 import type { ProviderKind, SkillMeta, PromptEntry } from "@/lib/types";
 import { useTheme, type ThemeMode } from "@/stores/theme";
@@ -106,14 +107,14 @@ export function SettingsPanel() {
   }, [kind, baseUrl]);
 
   return (
-    <div className="space-y-4">
-      <UnderlineTabs className="border-b border-border/60">
+    <div className="space-y-3">
+      <UnderlineTabs className="border-b border-border/50">
         {TABS.map((t) => (
           <UnderlineTab
             key={t.id}
             active={tab === t.id}
             onClick={() => setTab(t.id)}
-            className="px-2.5 text-[13px]"
+            className="px-2 text-[12.5px]"
           >
             {t.label}
           </UnderlineTab>
@@ -145,8 +146,8 @@ export function SettingsPanel() {
       )}
 
       {tab === "provider" && (
-        <div className="flex items-start gap-6">
-          <div className="min-w-0 flex-1 space-y-3">
+        <div className="flex items-start gap-5">
+          <div className="min-w-0 flex-1 space-y-2.5">
             {kind === "ollama" && ollamaModels.length === 0 && (
               <ActionNotice
                 tone="warning"
@@ -224,7 +225,7 @@ export function SettingsPanel() {
                   placeholder="••••••••"
                 />
               </SettingRow>
-              <div className="py-2.5">
+              <div className="py-2">
                 <Button
                   size="xs"
                   onClick={() =>
@@ -242,7 +243,7 @@ export function SettingsPanel() {
                       setStatus("Agent settings saved");
                       toast({
                         title: "Provider saved",
-                        description: `${kind} · ${model}`,
+                        description: `${providerLabel(kind)} · ${model}`,
                         tone: "success",
                       });
                     })()
@@ -422,8 +423,8 @@ export function SettingsPanel() {
       )}
 
       {tab === "about" && (
-        <div className="flex items-start gap-6">
-          <div className="min-w-0 flex-1 space-y-4">
+        <div className="flex items-start gap-5">
+          <div className="min-w-0 flex-1 space-y-3">
             <div className="grid gap-2 sm:grid-cols-2">
               <LinkTile
                 href="https://prompton.dev"
@@ -457,17 +458,10 @@ export function SettingsPanel() {
                 </Button>
               </div>
             </SettingSection>
-            <SettingSection title="Version">
-              <CopyableSnippet
-                title="Prompton"
-                description="Native agentic database client."
-                snippet="prompton 0.1.0"
-              />
-            </SettingSection>
           </div>
           <SettingsHelpAside
             title="About Prompton"
-            body="Inspect schema, run SQL, and ask an agent — with production writes gated until you approve."
+            body={`Desktop database client · v${APP_VERSION}. Inspect schema, run SQL, and ask an agent — with production writes gated until you approve.`}
             tips={[
               {
                 title: "Context is inspectable",

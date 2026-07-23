@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Fail if package.json / Cargo.toml / tauri.conf.json versions diverge. */
+/** Fail if package.json / Cargo.toml / tauri.conf.json / app-version diverge. */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,6 +10,10 @@ const cargo = readFileSync(join(root, "src-tauri/Cargo.toml"), "utf8");
 const tauri = JSON.parse(
   readFileSync(join(root, "src-tauri/tauri.conf.json"), "utf8"),
 );
+const appVersionSrc = readFileSync(
+  join(root, "src/lib/app-version.ts"),
+  "utf8",
+);
 
 const cargoMatch = /^version\s*=\s*"([^"]*)"/m.exec(cargo);
 if (!cargoMatch) {
@@ -17,9 +21,16 @@ if (!cargoMatch) {
   process.exit(1);
 }
 
+const appMatch = /export const APP_VERSION = "([^"]*)"/.exec(appVersionSrc);
+if (!appMatch) {
+  console.error("No APP_VERSION in src/lib/app-version.ts");
+  process.exit(1);
+}
+
 const want = pkg.version;
 const cargoVersion = cargoMatch[1];
 const tauriVersion = tauri.version;
+const appVersion = appMatch[1];
 
 const mismatches = [];
 if (cargoVersion !== want) {
@@ -27,6 +38,9 @@ if (cargoVersion !== want) {
 }
 if (tauriVersion !== want) {
   mismatches.push(`tauri.conf.json=${tauriVersion}`);
+}
+if (appVersion !== want) {
+  mismatches.push(`app-version.ts=${appVersion}`);
 }
 
 if (mismatches.length > 0) {

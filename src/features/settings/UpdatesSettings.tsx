@@ -13,6 +13,7 @@ import { SettingRow, SettingSection } from "@/components/setting-row";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
+import { APP_VERSION } from "@/lib/app-version";
 import { isTauri } from "@/lib/tauri";
 import { useActivityLog } from "@/stores/activity-log";
 import { useWorkspace } from "@/stores/workspace";
@@ -33,18 +34,21 @@ type UpdateUiStatus =
 export function UpdatesSettings() {
   const setStatus = useWorkspace((s) => s.setStatus);
   const append = useActivityLog((s) => s.append);
-  const [version, setVersion] = useState("0.1.0");
+  const [version, setVersion] = useState(APP_VERSION);
   const [ui, setUi] = useState<UpdateUiStatus>({ kind: "idle" });
   const updateRef = useRef<Update | null>(null);
 
   useEffect(() => {
     void (async () => {
-      if (!isTauri()) return;
+      if (!isTauri()) {
+        setVersion(APP_VERSION);
+        return;
+      }
       try {
         const { getVersion } = await import("@tauri-apps/api/app");
         setVersion(await getVersion());
       } catch {
-        /* keep package default */
+        setVersion(APP_VERSION);
       }
     })();
   }, []);
@@ -213,7 +217,7 @@ export function UpdatesSettings() {
     <SettingSection title="Updates" description={`Prompton v${version}`}>
       <SettingRow
         title="Version"
-        description="Copy the running build string."
+        description={`Running build · v${version}`}
         action={
           <Button
             type="button"
