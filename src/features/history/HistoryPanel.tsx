@@ -353,7 +353,7 @@ export function HistoryPanel({
                 </UnderlineTab>
               ))}
             </UnderlineTabs>
-            <div className="mb-1 flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 pb-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -426,7 +426,7 @@ export function HistoryPanel({
               />
             </div>
           </ListPaneHeader>
-          <ListPaneScroll className="pt-28">
+          <ListPaneScroll className="pt-36">
             <div className="space-y-0.5 px-1">
               {entries.length === 0 ? (
                 <EmptyState
