@@ -46,6 +46,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { toast } from "@/hooks/use-toast";
 import { connectionIdentityColor } from "@/lib/connection-mark";
 import { abandonConnectionWork } from "@/lib/session";
 import { api, isDesktopRequiredError } from "@/lib/tauri";
@@ -173,8 +174,18 @@ export function ConnectionsPanel() {
       setOpen(false);
       await selectConnection(info.id);
       openArtifact("schema");
+      toast({
+        title: "Connected",
+        description: info.name,
+        tone: "success",
+      });
     } catch (e) {
       setStatus(String(e));
+      toast({
+        title: "Connection failed",
+        description: String(e),
+        tone: "error",
+      });
     }
   }
 
@@ -247,20 +258,21 @@ export function ConnectionsPanel() {
       </ListPaneHeader>
 
       <ListPaneScroll>
-        <div className="space-y-1 px-1">
+        <div className="space-y-0.5 px-1">
           {connections.length === 0 && (
             <EmptyState
               dashed
-              className="min-h-40 p-4"
+              className="min-h-36 p-3"
               title="No connections"
               description="Add Postgres or SQLite, or open a seeded demo to explore."
               actions={
                 <>
-                  <Button size="sm" onClick={() => setOpen(true)}>
+                  <Button size="xs" onClick={() => setOpen(true)}>
+                    <Plus className="size-3.5" />
                     Add connection
                   </Button>
                   <Button
-                    size="sm"
+                    size="xs"
                     variant="outline"
                     onClick={() => void connectDemo()}
                   >
@@ -274,7 +286,7 @@ export function ConnectionsPanel() {
           {connections.length > 0 && filtered.length === 0 && (
             <EmptyState
               dashed
-              className="min-h-32 p-4"
+              className="min-h-28 p-3"
               title="No matches"
               description="Try a different name, dialect, or host."
             />
@@ -287,7 +299,7 @@ export function ConnectionsPanel() {
                 <button
                   type="button"
                   className={cn(
-                    "w-full rounded-md border p-2.5 text-left transition-colors",
+                    "w-full rounded-md border px-2 py-2 text-left transition-colors",
                     active
                       ? "border-border bg-muted/70"
                       : "border-transparent hover:bg-muted/30",
@@ -300,7 +312,7 @@ export function ConnectionsPanel() {
                       {c.name}
                     </span>
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-4 text-[11px] text-muted-foreground">
+                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5 pl-4 text-[11px] text-muted-foreground">
                     <span
                       className={cn(
                         c.connected ? "text-success" : "text-muted-foreground",
@@ -323,7 +335,7 @@ export function ConnectionsPanel() {
                     <Button
                       size="icon-xs"
                       variant="ghost"
-                      className="absolute top-2 right-2 opacity-60 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100"
+                      className="absolute top-1.5 right-1.5 opacity-60 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 data-[state=open]:opacity-100"
                       aria-label={`Actions for ${c.name}`}
                     >
                       <MoreHorizontal className="size-3.5" />
@@ -429,25 +441,29 @@ export function ConnectionsPanel() {
           })}
 
           {connections.length > 0 && (
-            <button
+            <Button
               type="button"
-              className="mt-2 w-full rounded-lg px-3 py-2 text-left text-[11px] text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+              size="xs"
+              variant="ghost"
+              className="mt-1.5 w-full justify-start text-muted-foreground"
               onClick={() => void connectDemo()}
             >
               Reseed demo SQLite…
-            </button>
+            </Button>
           )}
         </div>
       </ListPaneScroll>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>New connection</DialogTitle>
+        <DialogContent className="gap-3 p-4 sm:max-w-md">
+          <DialogHeader className="gap-1">
+            <DialogTitle className="text-base">New connection</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-3">
-            <div className="grid gap-1.5">
-              <Label className="text-xs">Dialect</Label>
+          <div className="grid gap-2.5">
+            <div className="grid gap-1">
+              <Label className="text-[11px] text-muted-foreground">
+                Dialect
+              </Label>
               <Select
                 value={dialect}
                 onValueChange={(v) => setDialect(v as Dialect)}
@@ -461,16 +477,18 @@ export function ConnectionsPanel() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-1.5">
-              <Label className="text-xs">Name</Label>
+            <div className="grid gap-1">
+              <Label className="text-[11px] text-muted-foreground">Name</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
             </div>
             {dialect === "sqlite" ? (
-              <div className="grid gap-1.5">
-                <Label className="text-xs">File path</Label>
+              <div className="grid gap-1">
+                <Label className="text-[11px] text-muted-foreground">
+                  File path
+                </Label>
                 <Input
                   placeholder="/path/to/database.db"
                   value={form.filePath}
@@ -482,8 +500,10 @@ export function ConnectionsPanel() {
             ) : (
               <>
                 <div className="grid grid-cols-3 gap-2">
-                  <div className="col-span-2 grid gap-1.5">
-                    <Label className="text-xs">Host</Label>
+                  <div className="col-span-2 grid gap-1">
+                    <Label className="text-[11px] text-muted-foreground">
+                      Host
+                    </Label>
                     <Input
                       value={form.host}
                       onChange={(e) =>
@@ -491,8 +511,10 @@ export function ConnectionsPanel() {
                       }
                     />
                   </div>
-                  <div className="grid gap-1.5">
-                    <Label className="text-xs">Port</Label>
+                  <div className="grid gap-1">
+                    <Label className="text-[11px] text-muted-foreground">
+                      Port
+                    </Label>
                     <Input
                       value={form.port}
                       onChange={(e) =>
@@ -501,8 +523,10 @@ export function ConnectionsPanel() {
                     />
                   </div>
                 </div>
-                <div className="grid gap-1.5">
-                  <Label className="text-xs">Database</Label>
+                <div className="grid gap-1">
+                  <Label className="text-[11px] text-muted-foreground">
+                    Database
+                  </Label>
                   <Input
                     value={form.database}
                     onChange={(e) =>
@@ -511,8 +535,10 @@ export function ConnectionsPanel() {
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="grid gap-1.5">
-                    <Label className="text-xs">User</Label>
+                  <div className="grid gap-1">
+                    <Label className="text-[11px] text-muted-foreground">
+                      User
+                    </Label>
                     <Input
                       value={form.username}
                       onChange={(e) =>
@@ -520,8 +546,10 @@ export function ConnectionsPanel() {
                       }
                     />
                   </div>
-                  <div className="grid gap-1.5">
-                    <Label className="text-xs">Password</Label>
+                  <div className="grid gap-1">
+                    <Label className="text-[11px] text-muted-foreground">
+                      Password
+                    </Label>
                     <Input
                       type="password"
                       value={form.password}
@@ -533,12 +561,12 @@ export function ConnectionsPanel() {
                 </div>
               </>
             )}
-            <div className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-muted/30 p-3">
-              <div className="space-y-0.5">
-                <Label htmlFor="is-production" className="text-xs">
+            <div className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-muted/30 px-2.5 py-2">
+              <div className="min-w-0 space-y-0.5">
+                <Label htmlFor="is-production" className="text-[12px]">
                   Production database
                 </Label>
-                <p className="text-xs text-muted-foreground text-pretty">
+                <p className="text-[11px] leading-snug text-muted-foreground text-pretty">
                   {dialect === "postgres"
                     ? "Postgres defaults to production: read-only until HITL or admin unlock."
                     : "Read-only for the agent until HITL approval or an admin unlocks writes."}
@@ -552,10 +580,16 @@ export function ConnectionsPanel() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={() => setOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={() => void onConnect()}>Connect</Button>
+            <Button size="xs" onClick={() => void onConnect()}>
+              Connect
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

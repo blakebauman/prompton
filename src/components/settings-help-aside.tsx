@@ -25,33 +25,33 @@ export function SettingsHelpAside({
   return (
     <aside
       className={cn(
-        "sticky top-0 hidden w-[240px] shrink-0 space-y-5 lg:block",
+        "sticky top-0 hidden w-[220px] shrink-0 space-y-4 lg:block",
         className,
       )}
     >
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
+      <div className="space-y-1.5">
+        <h3 className="text-[13px] font-semibold tracking-tight">{title}</h3>
         {body && (
-          <p className="text-xs leading-relaxed text-muted-foreground text-pretty">
+          <p className="text-[11px] leading-relaxed text-muted-foreground text-pretty">
             {body}
           </p>
         )}
       </div>
       {tips && tips.length > 0 && (
-        <ul className="space-y-3">
+        <ul className="space-y-2.5">
           {tips.map((tip) => (
-            <li key={tip.title} className="space-y-1">
-              <div className="flex items-center gap-2">
+            <li key={tip.title} className="space-y-0.5">
+              <div className="flex items-center gap-1.5">
                 {tip.icon && (
                   <span className="text-muted-foreground" aria-hidden>
                     {tip.icon}
                   </span>
                 )}
-                <p className="text-xs font-medium text-foreground">
+                <p className="text-[11px] font-medium text-foreground">
                   {tip.title}
                 </p>
               </div>
-              <p className="text-xs leading-relaxed text-muted-foreground text-pretty">
+              <p className="text-[11px] leading-relaxed text-muted-foreground text-pretty">
                 {tip.body}
               </p>
             </li>

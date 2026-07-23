@@ -105,14 +105,14 @@ export function SettingsPanel() {
   }, [kind, baseUrl]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <UnderlineTabs className="border-b border-border/60">
         {TABS.map((t) => (
           <UnderlineTab
             key={t.id}
             active={tab === t.id}
             onClick={() => setTab(t.id)}
-            className="px-3"
+            className="px-2.5 text-[13px]"
           >
             {t.label}
           </UnderlineTab>
@@ -129,7 +129,7 @@ export function SettingsPanel() {
                 value={themeMode}
                 onValueChange={(v) => setThemeMode(v as ThemeMode)}
               >
-                <SelectTrigger className="w-[160px]">
+                <SelectTrigger size="sm" className="w-[140px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -144,8 +144,8 @@ export function SettingsPanel() {
       )}
 
       {tab === "provider" && (
-        <div className="flex items-start gap-8">
-          <div className="min-w-0 flex-1 space-y-4">
+        <div className="flex items-start gap-6">
+          <div className="min-w-0 flex-1 space-y-3">
             {kind === "ollama" && ollamaModels.length === 0 && (
               <ActionNotice
                 tone="warning"
@@ -164,7 +164,7 @@ export function SettingsPanel() {
                     value={kind}
                     onValueChange={(v) => setKind(v as ProviderKind)}
                   >
-                    <SelectTrigger className="w-[200px]">
+                    <SelectTrigger size="sm" className="w-[180px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -180,7 +180,7 @@ export function SettingsPanel() {
               <SettingRow title="Model">
                 {kind === "ollama" && ollamaModels.length > 0 ? (
                   <Select value={model} onValueChange={setModel}>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger size="sm" className="w-full">
                       <SelectValue placeholder="Select a local model" />
                     </SelectTrigger>
                     <SelectContent>
@@ -216,8 +216,9 @@ export function SettingsPanel() {
                   placeholder="••••••••"
                 />
               </SettingRow>
-              <div className="py-3">
+              <div className="py-2.5">
                 <Button
+                  size="xs"
                   onClick={() =>
                     void (async () => {
                       await api.agentSetSettings(
@@ -287,11 +288,11 @@ export function SettingsPanel() {
       {tab === "skills" && (
         <SettingSection title="Skills">
           {skills.length === 0 ? (
-            <p className="py-3 text-xs text-muted-foreground">
+            <p className="py-2.5 text-[11px] text-muted-foreground">
               No skills yet. Save one below to reuse mid-session.
             </p>
           ) : (
-            <ul className="space-y-2 py-3 text-xs text-muted-foreground">
+            <ul className="space-y-1.5 py-2.5 text-[11px] text-muted-foreground">
               {skills.map((s) => (
                 <li key={s.name}>
                   <span className="font-medium text-foreground">{s.name}</span>
@@ -300,7 +301,7 @@ export function SettingsPanel() {
               ))}
             </ul>
           )}
-          <div className="space-y-2 py-2">
+          <div className="space-y-1.5 py-2">
             <Input
               placeholder="skill-name"
               value={skillName}
@@ -315,14 +316,21 @@ export function SettingsPanel() {
               placeholder="Skill body markdown"
               value={skillBody}
               onChange={(e) => setSkillBody(e.target.value)}
+              className="min-h-24"
             />
             <Button
+              size="xs"
               variant="secondary"
               onClick={() =>
                 void (async () => {
                   await api.saveSkill(skillName, skillDesc, skillBody);
                   setSkills(await api.listSkills());
                   setStatus(`Saved skill ${skillName}`);
+                  toast({
+                    title: "Skill saved",
+                    description: skillName,
+                    tone: "success",
+                  });
                 })()
               }
             >
@@ -335,11 +343,11 @@ export function SettingsPanel() {
       {tab === "prompts" && (
         <SettingSection title="Prompt library">
           {prompts.length === 0 ? (
-            <p className="py-3 text-xs text-muted-foreground">
+            <p className="py-2.5 text-[11px] text-muted-foreground">
               No saved prompts yet.
             </p>
           ) : (
-            <ul className="space-y-1 py-3 text-xs text-muted-foreground">
+            <ul className="space-y-1 py-2.5 text-[11px] text-muted-foreground">
               {prompts.map((p) => (
                 <li key={p.id}>
                   <span className="font-medium text-foreground">{p.title}</span>
@@ -347,7 +355,7 @@ export function SettingsPanel() {
               ))}
             </ul>
           )}
-          <div className="space-y-2 py-2">
+          <div className="space-y-1.5 py-2">
             <Input
               placeholder="Title"
               value={promptTitle}
@@ -357,14 +365,21 @@ export function SettingsPanel() {
               placeholder="Prompt body"
               value={promptBody}
               onChange={(e) => setPromptBody(e.target.value)}
+              className="min-h-24"
             />
             <Button
+              size="xs"
               variant="secondary"
               onClick={() =>
                 void (async () => {
                   await api.savePrompt(promptTitle, promptBody);
                   setPrompts(await api.listPrompts());
                   setStatus("Prompt saved");
+                  toast({
+                    title: "Prompt saved",
+                    description: promptTitle,
+                    tone: "success",
+                  });
                 })()
               }
             >
@@ -377,7 +392,7 @@ export function SettingsPanel() {
       {tab === "shortcuts" && <ShortcutsSettings />}
 
       {tab === "diagnostics" && (
-        <div className="flex items-start gap-8">
+        <div className="flex items-start gap-6">
           <div className="min-w-0 flex-1">
             <LogConsole />
           </div>
@@ -399,9 +414,9 @@ export function SettingsPanel() {
       )}
 
       {tab === "about" && (
-        <div className="flex items-start gap-8">
-          <div className="min-w-0 flex-1 space-y-5">
-            <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex items-start gap-6">
+          <div className="min-w-0 flex-1 space-y-4">
+            <div className="grid gap-2 sm:grid-cols-2">
               <LinkTile
                 href="https://prompton.dev"
                 title="Documentation"
@@ -426,6 +441,7 @@ export function SettingsPanel() {
             >
               <div className="py-2">
                 <Button
+                  size="xs"
                   variant="secondary"
                   onClick={() => openArtifact("context")}
                 >
