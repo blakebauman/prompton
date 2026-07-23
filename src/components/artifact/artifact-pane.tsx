@@ -275,13 +275,13 @@ function EmptyArtifact({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex h-full min-h-[220px] flex-col items-center justify-center gap-3 p-8 text-center">
+    <div className="flex h-full min-h-40 flex-col items-center justify-center gap-2 p-4 text-center">
       <div className="max-w-sm space-y-1">
         <h3 className="text-sm font-medium">{title}</h3>
-        <p className="text-sm text-muted-foreground text-pretty">{description}</p>
+        <p className="text-xs text-muted-foreground text-pretty">{description}</p>
       </div>
       {actions && (
-        <div className="flex flex-wrap items-center justify-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-1.5">
           {actions}
         </div>
       )}

@@ -27,7 +27,7 @@ export const ConversationContent = ({
   ...props
 }: ConversationContentProps) => (
   <StickToBottom.Content
-    className={cn("flex flex-col gap-6 p-4", className)}
+    className={cn("flex flex-col gap-2 p-3", className)}
     {...props}
   />
 );
@@ -48,7 +48,7 @@ export const ConversationEmptyState = ({
 }: ConversationEmptyStateProps) => (
   <div
     className={cn(
-      "flex size-full flex-col items-center justify-center gap-3 px-6 py-8 text-center",
+      "flex size-full flex-col items-center justify-center gap-2 px-4 py-5 text-center",
       className,
     )}
     {...props}

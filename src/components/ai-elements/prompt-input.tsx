@@ -74,9 +74,9 @@ export function PromptInputTextarea({
         "transition-[min-height,padding] duration-150 ease-out",
         expandOnFocus
           ? expanded
-            ? "min-h-[88px] max-h-[220px] overflow-y-auto py-3"
-            : "min-h-10 max-h-10 overflow-hidden py-2.5"
-          : "min-h-[64px] py-3",
+            ? "min-h-[72px] max-h-[200px] overflow-y-auto py-2"
+            : "min-h-9 max-h-9 overflow-hidden py-2"
+          : "min-h-[56px] py-2",
         className,
       )}
       onFocus={(e) => {
@@ -107,7 +107,7 @@ export function PromptInputFooter({
 }: PromptInputFooterProps) {
   return (
     <div
-      className={cn("flex items-center justify-between gap-2 px-2 py-1.5", className)}
+      className={cn("flex items-center justify-between gap-2 px-2 py-1", className)}
       {...props}
     />
   );

@@ -515,7 +515,7 @@ export function AssistantPanel({
       </div>
 
       <Conversation className="min-h-0">
-        <ConversationContent className="gap-2 px-4 pt-1 pb-4">
+        <ConversationContent className="gap-2 px-3 pt-1 pb-3">
           {!activeConnId ? (
             <div className="flex flex-1 items-center justify-center px-2 py-6">
               <SetupChecklist
@@ -597,7 +597,7 @@ export function AssistantPanel({
         <ConversationScrollButton />
       </Conversation>
 
-      <div className="space-y-1.5 border-t border-border/60 p-2">
+      <div className="space-y-1.5 border-t border-border/60 px-2 py-1.5">
         {sessionResumeNotice && (
           <ActionNotice
             tone="neutral"
