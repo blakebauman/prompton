@@ -3,6 +3,7 @@ import {
   BookMarked,
   FileText,
   MessageSquare,
+  MessageSquarePlus,
   Plus,
   Sparkles,
 } from "lucide-react";
@@ -37,6 +38,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { formatWhen } from "@/lib/format";
 import { api, isDesktopRequiredError } from "@/lib/tauri";
 import type { PromptEntry, SkillMeta } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -255,28 +257,69 @@ export function LibraryPanel({
     }
   }
 
-  function useInAssistant() {
-    const text =
-      tab === "skills"
-        ? skillBody.trim() || skillDesc.trim()
-        : promptBody.trim();
+  function sendToAssistant(draft: string, label: string) {
+    const text = draft.trim();
     if (!text) {
       toast({ title: "Nothing to send", description: "Add a body first." });
       return;
     }
-    const draft =
-      tab === "skills" && selectedSkill
-        ? `Use skill “${selectedSkill}”:\n\n${text}`
-        : text;
-    setComposerDraft(draft);
+    setComposerDraft(text);
     onOpenWorkspace?.();
     setStatus("Loaded into assistant");
     toast({
       title: "Loaded into assistant",
-      description:
-        tab === "skills" ? selectedSkill ?? "Skill" : promptTitle || "Prompt",
+      description: label,
       tone: "success",
     });
+  }
+
+  function useInAssistant() {
+    if (tab === "skills" && selectedSkill) {
+      const text = skillBody.trim() || skillDesc.trim();
+      if (!text) {
+        toast({ title: "Nothing to send", description: "Add a body first." });
+        return;
+      }
+      sendToAssistant(
+        `Use skill “${selectedSkill}”:\n\n${text}`,
+        selectedSkill,
+      );
+      return;
+    }
+    sendToAssistant(promptBody, promptTitle || "Prompt");
+  }
+
+  async function useSkillFromList(skill: SkillMeta) {
+    setSelectedSkill(skill.name);
+    try {
+      const content = await api.getSkill(skill.name);
+      const body =
+        (content.body ?? "").trim() || (content.description ?? "").trim();
+      if (!body) {
+        toast({ title: "Nothing to send", description: "Add a body first." });
+        return;
+      }
+      sendToAssistant(`Use skill “${skill.name}”:\n\n${body}`, skill.name);
+    } catch (e) {
+      const fallback = skill.description?.trim() ?? "";
+      if (!fallback) {
+        toast({
+          title: "Couldn’t load skill",
+          description: String(e),
+          tone: "error",
+        });
+        return;
+      }
+      sendToAssistant(
+        `Use skill “${skill.name}”:\n\n${fallback}`,
+        skill.name,
+      );
+    }
+  }
+
+  function usePromptFromList(prompt: PromptEntry) {
+    setSelectedPrompt(prompt.id);
+    sendToAssistant(prompt.body, prompt.title || "Prompt");
   }
 
   return (
@@ -284,7 +327,7 @@ export function LibraryPanel({
       <div className="w-[320px] shrink-0">
         <ListPane>
           <ListPaneHeader>
-            <ListPaneTitleRow className="mb-2">
+            <ListPaneTitleRow className="mb-1">
               <ListPaneTitle>Library</ListPaneTitle>
               <ListPaneActions>
                 <Button
@@ -298,7 +341,7 @@ export function LibraryPanel({
                 </Button>
               </ListPaneActions>
             </ListPaneTitleRow>
-            <UnderlineTabs className="border-b border-border/60">
+            <UnderlineTabs className="mb-1.5 border-b border-border/50">
               {(
                 [
                   { id: "skills", label: "Skills" },
@@ -309,7 +352,6 @@ export function LibraryPanel({
                   key={t.id}
                   active={tab === t.id}
                   onClick={() => setTab(t.id)}
-                  className="px-3"
                 >
                   {t.label}
                 </UnderlineTab>
@@ -321,11 +363,11 @@ export function LibraryPanel({
               placeholder={
                 tab === "skills" ? "Search skills…" : "Search prompts…"
               }
-              className="mt-2"
+              className="mb-1"
             />
           </ListPaneHeader>
 
-          <ListPaneScroll className="pt-36">
+          <ListPaneScroll className="pt-28">
             <div className="space-y-0.5 px-1">
               {empty && (
                 <EmptyState
@@ -366,29 +408,44 @@ export function LibraryPanel({
                 filteredSkills.map((s) => {
                   const active = selectedSkill === s.name;
                   return (
-                    <button
-                      key={s.name}
-                      type="button"
-                      className={cn(
-                        "flex w-full items-start gap-2 rounded-md border px-2 py-2 text-left transition-colors",
-                        active
-                          ? "border-border bg-muted/70"
-                          : "border-transparent hover:bg-muted/30",
-                      )}
-                      onClick={() => setSelectedSkill(s.name)}
-                    >
-                      <Sparkles className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-                      <span className="min-w-0">
-                        <span className="block truncate text-[13px] font-medium leading-snug">
-                          {s.name}
-                        </span>
-                        {s.description && (
-                          <span className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
-                            {s.description}
-                          </span>
+                    <div key={s.name} className="group relative">
+                      <button
+                        type="button"
+                        className={cn(
+                          "flex w-full items-start gap-2 rounded-md border px-2 py-1.5 pr-10 text-left transition-colors",
+                          active
+                            ? "border-border bg-muted/70"
+                            : "border-transparent hover:bg-muted/30",
                         )}
-                      </span>
-                    </button>
+                        onClick={() => setSelectedSkill(s.name)}
+                      >
+                        <Sparkles className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[13px] font-medium leading-snug">
+                            {s.name}
+                          </span>
+                          {s.description && (
+                            <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                              {s.description}
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                      <div className="absolute top-1 right-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                        <Button
+                          size="icon-xs"
+                          variant="ghost"
+                          title="Use in assistant"
+                          aria-label={`Use skill ${s.name} in assistant`}
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            void useSkillFromList(s);
+                          }}
+                        >
+                          <MessageSquarePlus className="size-3" />
+                        </Button>
+                      </div>
+                    </div>
                   );
                 })}
 
@@ -396,27 +453,45 @@ export function LibraryPanel({
                 filteredPrompts.map((p) => {
                   const active = selectedPrompt === p.id;
                   return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      className={cn(
-                        "flex w-full items-start gap-2 rounded-md border px-2 py-2 text-left transition-colors",
-                        active
-                          ? "border-border bg-muted/70"
-                          : "border-transparent hover:bg-muted/30",
-                      )}
-                      onClick={() => setSelectedPrompt(p.id)}
-                    >
-                      <FileText className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-                      <span className="min-w-0">
-                        <span className="block truncate text-[13px] font-medium leading-snug">
-                          {p.title}
+                    <div key={p.id} className="group relative">
+                      <button
+                        type="button"
+                        className={cn(
+                          "flex w-full items-start gap-2 rounded-md border px-2 py-1.5 pr-10 text-left transition-colors",
+                          active
+                            ? "border-border bg-muted/70"
+                            : "border-transparent hover:bg-muted/30",
+                        )}
+                        onClick={() => setSelectedPrompt(p.id)}
+                      >
+                        <FileText className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[13px] font-medium leading-snug">
+                            {p.title}
+                          </span>
+                          <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                            {p.body.trim()
+                              ? p.body.replace(/\s+/g, " ").slice(0, 80)
+                              : formatWhen(p.updatedAt)}
+                          </span>
                         </span>
-                        <span className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
-                          {p.body.slice(0, 120)}
-                        </span>
-                      </span>
-                    </button>
+                      </button>
+                      <div className="absolute top-1 right-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                        <Button
+                          size="icon-xs"
+                          variant="ghost"
+                          title="Use in assistant"
+                          aria-label={`Use prompt ${p.title} in assistant`}
+                          disabled={!p.body.trim()}
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            usePromptFromList(p);
+                          }}
+                        >
+                          <MessageSquarePlus className="size-3" />
+                        </Button>
+                      </div>
+                    </div>
                   );
                 })}
             </div>
