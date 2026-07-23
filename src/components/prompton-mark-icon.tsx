@@ -4,10 +4,7 @@ type PromptonMarkIconProps = {
   className?: string;
 };
 
-/**
- * Prompton mark: database + terminal prompt `>_`
- * (chevron and underscore cursor, spaced so it won't read as a flame).
- */
+/** Prompton mark: database cylinder only. */
 export function PromptonMarkIcon({ className }: PromptonMarkIconProps) {
   return (
     <svg
@@ -18,38 +15,23 @@ export function PromptonMarkIcon({ className }: PromptonMarkIconProps) {
       aria-hidden
     >
       <ellipse
-        cx="7.5"
+        cx="12"
         cy="6.5"
-        rx="4"
-        ry="1.85"
+        rx="6.5"
+        ry="2.4"
         stroke="currentColor"
-        strokeWidth="1.55"
+        strokeWidth="1.75"
       />
       <path
-        d="M3.5 6.5v8.75c0 1 1.8 1.85 4 1.85s4-.85 4-1.85V6.5"
+        d="M5.5 6.5v9.5c0 1.35 2.9 2.45 6.5 2.45s6.5-1.1 6.5-2.45V6.5"
         stroke="currentColor"
-        strokeWidth="1.55"
+        strokeWidth="1.75"
         strokeLinejoin="round"
       />
       <path
-        d="M3.5 10.85c0 1 1.8 1.85 4 1.85s4-.85 4-1.85"
+        d="M5.5 11c0 1.35 2.9 2.45 6.5 2.45s6.5-1.1 6.5-2.45"
         stroke="currentColor"
-        strokeWidth="1.55"
-      />
-      {/* `>` */}
-      <path
-        d="M14 8.75 17.75 12 14 15.25"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {/* `_` cursor — reads as terminal, not a flame tip */}
-      <path
-        d="M19.1 15.1h3.2"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
+        strokeWidth="1.75"
       />
     </svg>
   );

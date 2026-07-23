@@ -9,8 +9,8 @@ type BrandMarkProps = {
 };
 
 /**
- * Compact Prompton mark. Use with wordmark where the agent/product
- * identity should lead; mark-only for dense chrome.
+ * Compact Prompton mark (database cylinder). Use with wordmark where the
+ * agent/product identity should lead; mark-only for dense chrome.
  */
 export function BrandMark({
   className,

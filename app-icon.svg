@@ -1,30 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none">
   <rect width="1024" height="1024" rx="224" fill="#171717"/>
-  <ellipse cx="340" cy="300" rx="170" ry="74" stroke="#FAFAFA" stroke-width="48"/>
+  <ellipse cx="512" cy="300" rx="240" ry="96" stroke="#FAFAFA" stroke-width="56"/>
   <path
-    d="M170 300v360c0 41 76 74 170 74s170-33 170-74V300"
+    d="M272 300v380c0 53 107.5 96 240 96s240-43 240-96V300"
     stroke="#FAFAFA"
-    stroke-width="48"
+    stroke-width="56"
     stroke-linejoin="round"
   />
   <path
-    d="M170 480c0 41 76 74 170 74s170-33 170-74"
+    d="M272 490c0 53 107.5 96 240 96s240-43 240-96"
     stroke="#FAFAFA"
-    stroke-width="48"
-  />
-  <!-- Prompt chevron -->
-  <path
-    d="M580 340 L780 512 L580 684"
-    stroke="#FAFAFA"
-    stroke-width="64"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
-  <!-- Underscore cursor -->
-  <path
-    d="M820 680 H960"
-    stroke="#FAFAFA"
-    stroke-width="72"
-    stroke-linecap="round"
+    stroke-width="56"
   />
 </svg>
