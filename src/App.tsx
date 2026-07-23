@@ -37,6 +37,8 @@ import {
   requestRunSql,
   useAppShortcuts,
 } from "@/hooks/use-app-shortcuts";
+import { useWorkspacePersist } from "@/hooks/use-workspace-persist";
+import { toast } from "@/hooks/use-toast";
 import {
   reconnectConnection,
   refreshConnections,
@@ -44,7 +46,6 @@ import {
 import { api, isDesktopRequiredError } from "@/lib/tauri";
 import { TOP_SAFE_AREA_PADDING } from "@/lib/ui";
 import { cn } from "@/lib/utils";
-import { toast } from "@/hooks/use-toast";
 import { useWorkspace } from "@/stores/workspace";
 
 export default function App() {
@@ -119,6 +120,7 @@ function AppShell() {
   }, [showStatus, busy, tone, status, setStatus]);
 
   useActivityLogBridge();
+  useWorkspacePersist();
 
   useAppShortcuts({
     toggleArtifact: () => toggle(),

@@ -7,6 +7,11 @@ import {
   type ReactNode,
 } from "react";
 
+import {
+  loadWorkspaceSnapshot,
+  persistArtifactPrefs,
+} from "@/lib/workspace-persist";
+
 /** Surfaces shown in Prompton’s artifact pane (fold.run pattern). */
 export type ArtifactKind =
   | "results"
@@ -17,6 +22,19 @@ export type ArtifactKind =
   | "context";
 
 export const DEFAULT_ARTIFACT_KIND: ArtifactKind = "results";
+
+const ARTIFACT_KINDS: ArtifactKind[] = [
+  "results",
+  "chart",
+  "sql",
+  "schema",
+  "explain",
+  "context",
+];
+
+function isArtifactKind(v: string): v is ArtifactKind {
+  return (ARTIFACT_KINDS as string[]).includes(v);
+}
 
 export type ArtifactState =
   | { open: false; kind: null; payload: null }
@@ -31,6 +49,23 @@ type ArtifactContextValue = {
 
 const ArtifactCtx = createContext<ArtifactContextValue | null>(null);
 
+function initialArtifactState(defaultOpen: boolean): {
+  state: ArtifactState;
+  lastKind: ArtifactKind;
+} {
+  const snap = loadWorkspaceSnapshot();
+  const kind = isArtifactKind(snap.artifactKind)
+    ? snap.artifactKind
+    : DEFAULT_ARTIFACT_KIND;
+  const open = defaultOpen && snap.artifactOpen;
+  return {
+    lastKind: kind,
+    state: open
+      ? { open: true, kind, payload: null }
+      : { open: false, kind: null, payload: null },
+  };
+}
+
 export function ArtifactProvider({
   defaultOpen = true,
   children,
@@ -38,28 +73,33 @@ export function ArtifactProvider({
   defaultOpen?: boolean;
   children: ReactNode;
 }) {
-  const [state, setState] = useState<ArtifactState>(() =>
-    defaultOpen
-      ? { open: true, kind: DEFAULT_ARTIFACT_KIND, payload: null }
-      : { open: false, kind: null, payload: null },
-  );
-  const lastKindRef = useRef<ArtifactKind>(DEFAULT_ARTIFACT_KIND);
+  const initial = useRef(initialArtifactState(defaultOpen)).current;
+  const [state, setState] = useState<ArtifactState>(initial.state);
+  const lastKindRef = useRef<ArtifactKind>(initial.lastKind);
 
   const value = useMemo<ArtifactContextValue>(
     () => ({
       state,
       open: (kind, payload) => {
         lastKindRef.current = kind;
+        persistArtifactPrefs(kind, true);
         setState({ open: true, kind, payload: payload ?? null });
       },
-      close: () => setState({ open: false, kind: null, payload: null }),
+      close: () => {
+        persistArtifactPrefs(lastKindRef.current, false);
+        setState({ open: false, kind: null, payload: null });
+      },
       toggle: (preferredKind) =>
         setState((s) => {
-          if (s.open) return { open: false, kind: null, payload: null };
+          if (s.open) {
+            persistArtifactPrefs(lastKindRef.current, false);
+            return { open: false, kind: null, payload: null };
+          }
           const safe =
             typeof preferredKind === "string" ? preferredKind : undefined;
           const kind = safe ?? lastKindRef.current ?? DEFAULT_ARTIFACT_KIND;
           lastKindRef.current = kind;
+          persistArtifactPrefs(kind, true);
           return { open: true, kind, payload: null };
         }),
     }),

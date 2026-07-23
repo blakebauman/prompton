@@ -54,10 +54,14 @@ import {
   refreshConnections,
 } from "@/lib/connection-health";
 import { connectionIdentityColor } from "@/lib/connection-mark";
-import { abandonConnectionWork } from "@/lib/session";
+import {
+  forgetConnectionDraft,
+  switchActiveConnection,
+} from "@/lib/session";
 import { api, isDesktopRequiredError } from "@/lib/tauri";
 import type { ConnectRequest, ConnectionInfo, Dialect } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { loadWorkspaceSnapshot } from "@/lib/workspace-persist";
 import { useWorkspace } from "@/stores/workspace";
 
 export function ConnectionsPanel() {
@@ -65,7 +69,6 @@ export function ConnectionsPanel() {
     connections,
     activeConnId,
     setConnections,
-    setActiveConnId,
     setSchemas,
     setSql,
     setResult,
@@ -115,18 +118,36 @@ export function ConnectionsPanel() {
   }
 
   useEffect(() => {
-    void refresh().catch((e) => {
-      if (isDesktopRequiredError(e)) return;
-      setStatus(String(e));
-    });
+    void (async () => {
+      try {
+        const list = await refreshConnections();
+        const snap = loadWorkspaceSnapshot();
+        if (snap.activeConnId && list.some((c) => c.id === snap.activeConnId)) {
+          // Restore without overwriting saved drafts with the cold default store.
+          await switchActiveConnection(snap.activeConnId, {
+            persistCurrent: false,
+          });
+          await selectConnection(snap.activeConnId);
+        } else if (!snap.activeConnId && snap.orphanSql) {
+          setSql(snap.orphanSql);
+        }
+      } catch (e) {
+        if (isDesktopRequiredError(e)) return;
+        setStatus(String(e));
+      }
+    })();
+    // Boot once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function selectConnection(id: string) {
-    if (id !== activeConnId) {
-      await abandonConnectionWork();
+    const switching = id !== useWorkspace.getState().activeConnId;
+    if (switching) {
+      await switchActiveConnection(id);
     }
-    setActiveConnId(id);
-    const conn = connections.find((c) => c.id === id);
+    const conn = useWorkspace
+      .getState()
+      .connections.find((c) => c.id === id);
     if (conn && !conn.connected) {
       try {
         await reconnectConnection(id);
@@ -216,8 +237,7 @@ export function ConnectionsPanel() {
       setStatus("Seeding demo database…");
       const [info, page] = await api.openDemoSqlite();
       await refresh();
-      await abandonConnectionWork();
-      setActiveConnId(info.id);
+      await switchActiveConnection(info.id);
       const schemas = await api.listSchemas(info.id);
       setSchemas(schemas);
       setSql(
@@ -494,11 +514,11 @@ export function ConnectionsPanel() {
                           }
                           try {
                             if (activeConnId === c.id) {
-                              await abandonConnectionWork();
-                              setActiveConnId(null);
+                              await switchActiveConnection(null);
                               setSchemas([]);
                             }
                             await api.removeConnection(c.id);
+                            forgetConnectionDraft(c.id);
                             await refresh();
                             toast({
                               title: "Connection removed",

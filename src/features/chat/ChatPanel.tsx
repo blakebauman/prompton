@@ -48,7 +48,10 @@ import { SetupChecklist } from "@/components/setup-checklist";
 import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { abandonConnectionWork, isCurrentAgentSession } from "@/lib/session";
+import {
+  isCurrentAgentSession,
+  switchActiveConnection,
+} from "@/lib/session";
 import { api, onEvent } from "@/lib/tauri";
 import type { ChatMessage, PendingConfirmation, QueryPage } from "@/lib/types";
 import { useWorkspace } from "@/stores/workspace";
@@ -83,7 +86,6 @@ export function ChatPanel({
     setStatus,
     setSql,
     setConnections,
-    setActiveConnId,
     setSchemas,
     clearChat,
     composerDraft,
@@ -109,8 +111,7 @@ export function ChatPanel({
       setStatus("Seeding demo database…");
       const [info, page] = await api.openDemoSqlite();
       setConnections(await api.listConnections());
-      await abandonConnectionWork();
-      setActiveConnId(info.id);
+      await switchActiveConnection(info.id);
       setSchemas(await api.listSchemas(info.id));
       setSql(
         "SELECT id, user_id, status, total_cents, placed_at FROM orders ORDER BY id;",
