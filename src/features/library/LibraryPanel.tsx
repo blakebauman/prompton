@@ -357,17 +357,18 @@ export function LibraryPanel({
                 </UnderlineTab>
               ))}
             </UnderlineTabs>
-            <ListPaneSearch
-              value={query}
-              onChange={setQuery}
-              placeholder={
-                tab === "skills" ? "Search skills…" : "Search prompts…"
-              }
-              className="mb-1"
-            />
+            <div className="pb-3">
+              <ListPaneSearch
+                value={query}
+                onChange={setQuery}
+                placeholder={
+                  tab === "skills" ? "Search skills…" : "Search prompts…"
+                }
+              />
+            </div>
           </ListPaneHeader>
 
-          <ListPaneScroll className="pt-28">
+          <ListPaneScroll className="pt-36">
             <div className="space-y-0.5 px-1">
               {empty && (
                 <EmptyState
