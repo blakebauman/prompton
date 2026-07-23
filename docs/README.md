@@ -25,5 +25,6 @@
 - [Frontend](./technical/frontend.md) — React shell, features, stores
 - [Contributing](./technical/contributing.md) — local setup, checks, conventions
 - [Releases](./technical/releases.md) — versioning, CI packaging, signing
+- [macOS notarization](./technical/macos-notarization.md) — Developer ID secrets + Gatekeeper-clean builds
 
 Product brand notes live in [`PRODUCT.md`](../PRODUCT.md). Root developer quickstart remains in [`README.md`](../README.md).

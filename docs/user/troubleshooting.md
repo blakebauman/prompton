@@ -9,7 +9,7 @@ Ad-hoc (unsigned / un-notarized) builds are blocked by Gatekeeper.
 1. Right-click the app → **Open** → confirm, or  
 2. `xattr -cr /Applications/Prompton.app`
 
-Developer-ID signed + notarized builds avoid this; unsigned CI builds will keep needing the workaround.
+Developer-ID signed + notarized builds avoid this. Until repository `APPLE_*` secrets are configured, CI ships ad-hoc builds that keep needing the workaround — see [macOS notarization](../technical/macos-notarization.md).
 
 ## Connection fails
 

@@ -9,7 +9,7 @@ High-performance, native, agentic database client — conversational-first — f
 Detailed guides live under [`docs/`](./docs/README.md):
 
 - **Users:** [Getting started](./docs/user/getting-started.md) · [Workspace](./docs/user/workspace.md) · [Assistant](./docs/user/assistant.md) · [Safety](./docs/user/safety.md) · [Troubleshooting](./docs/user/troubleshooting.md)
-- **Technical teams:** [Architecture](./docs/technical/architecture.md) · [Agent](./docs/technical/agent.md) · [Database](./docs/technical/database.md) · [Security & data](./docs/technical/security-and-data.md) · [Contributing](./docs/technical/contributing.md) · [Releases](./docs/technical/releases.md)
+- **Technical teams:** [Architecture](./docs/technical/architecture.md) · [Agent](./docs/technical/agent.md) · [Database](./docs/technical/database.md) · [Security & data](./docs/technical/security-and-data.md) · [Contributing](./docs/technical/contributing.md) · [Releases](./docs/technical/releases.md) · [macOS notarization](./docs/technical/macos-notarization.md)
 
 ## MVP features
 
@@ -110,16 +110,15 @@ That uploads macOS + Linux artifacts, updater signatures, and `latest.json` (Set
 | --- | --- |
 | `TAURI_SIGNING_PRIVATE_KEY` | Minisign private key for updater artifacts (required) |
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password for that key |
-| `APPLE_CERTIFICATE` | Base64 `.p12` Developer ID Application cert (optional) |
+| `APPLE_CERTIFICATE` | Base64 `.p12` Developer ID Application cert (optional*) |
 | `APPLE_CERTIFICATE_PASSWORD` | `.p12` password |
 | `APPLE_SIGNING_IDENTITY` | e.g. `Developer ID Application: …` |
-| `APPLE_ID` | Apple ID email for notarization |
-| `APPLE_PASSWORD` | [App-specific password](https://appleid.apple.com) |
-| `APPLE_TEAM_ID` | 10-character Team ID |
+| `APPLE_ID` / `APPLE_PASSWORD` / `APPLE_TEAM_ID` | Apple ID notarization auth (optional*) |
+| `APPLE_API_ISSUER` / `APPLE_API_KEY` / `APPLE_API_KEY_BASE64` | App Store Connect API notarization auth (optional*) |
 
-Without the `APPLE_*` secrets, macOS builds are **ad-hoc signed** (Gatekeeper: right-click → Open, or `xattr -cr /Applications/Prompton.app`). With them present, the release job signs with Developer ID and notarizes.
+\*Complete signing + one auth set → Developer ID signed + notarized. No `APPLE_*` → **ad-hoc** (Gatekeeper: right-click → Open, or `xattr -cr`). Partial `APPLE_*` fails the release job.
 
-See [Tauri macOS signing](https://v2.tauri.app/distribute/sign/macos/).
+Setup checklist: [`docs/technical/macos-notarization.md`](./docs/technical/macos-notarization.md). Upstream: [Tauri macOS signing](https://v2.tauri.app/distribute/sign/macos/).
 
 Linux bundles (`deb` / `appimage` / `rpm`) are built on Ubuntu runners.
 
