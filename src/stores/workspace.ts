@@ -16,6 +16,8 @@ interface WorkspaceState {
   sql: string;
   result: QueryPage | null;
   running: boolean;
+  /** In-flight query id (client-supplied) for Cancel before the result returns. */
+  activeQueryId: string | null;
   messages: ChatMessage[];
   sessionId: string | null;
   agentBusy: boolean;
@@ -32,6 +34,7 @@ interface WorkspaceState {
   setSql: (sql: string) => void;
   setResult: (r: QueryPage | null) => void;
   setRunning: (v: boolean) => void;
+  setActiveQueryId: (id: string | null) => void;
   addMessage: (m: ChatMessage) => void;
   patchMessage: (id: string, patch: Partial<ChatMessage>) => void;
   /** Mark in-flight tool cards as cancelled / errored. */
@@ -59,6 +62,7 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
   sql: "SELECT 1;",
   result: null,
   running: false,
+  activeQueryId: null,
   messages: [
     {
       id: "welcome",
@@ -81,6 +85,7 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
   setSql: (sql) => set({ sql }),
   setResult: (result) => set({ result }),
   setRunning: (running) => set({ running }),
+  setActiveQueryId: (activeQueryId) => set({ activeQueryId }),
   addMessage: (m) => set((s) => ({ messages: [...s.messages, m] })),
   patchMessage: (id, patch) =>
     set((s) => ({
@@ -135,6 +140,7 @@ export const useWorkspace = create<WorkspaceState>((set) => ({
       sessionId: null,
       agentBusy: false,
       running: false,
+      activeQueryId: null,
       result: null,
       explainPlan: null,
       pendingConfirm: null,

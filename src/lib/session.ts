@@ -1,4 +1,5 @@
 import { api } from "@/lib/tauri";
+import { cancelActiveQuery } from "@/lib/run-query";
 import { useWorkspace } from "@/stores/workspace";
 
 /**
@@ -14,9 +15,9 @@ export async function abandonConnectionWork() {
       /* ignore */
     }
   }
-  if (s.running && s.result?.queryId) {
+  if (s.running && s.activeQueryId) {
     try {
-      await api.cancelQuery(s.result.queryId);
+      await cancelActiveQuery();
     } catch {
       /* ignore */
     }

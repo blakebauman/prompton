@@ -73,6 +73,8 @@ export interface RunQueryRequest {
   connId: string;
   sql: string;
   pageSize?: number;
+  /** Client-supplied id so Cancel can target an in-flight run. */
+  queryId?: string;
 }
 
 export interface ChatMessage {

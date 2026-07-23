@@ -15,6 +15,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { RUN_SQL_EVENT } from "@/hooks/use-app-shortcuts";
 import { formatSql } from "@/lib/format-sql";
+import {
+  cancelActiveQuery,
+  confirmCancellableWrite,
+  isQueryCancelled,
+  runCancellableQuery,
+} from "@/lib/run-query";
+import { isMutatingSql } from "@/lib/sql-mutate";
 import { api } from "@/lib/tauri";
 import type { PendingConfirmation } from "@/lib/types";
 import { useShortcuts } from "@/stores/shortcuts";
@@ -27,11 +34,10 @@ export function SqlEditor() {
     activeConnId,
     connections,
     running,
-    setRunning,
+    activeQueryId,
     setResult,
     setStatus,
     setExplainPlan,
-    result,
   } = useWorkspace();
   const { open: openArtifact } = useArtifact();
   const [pending, setPending] = useState<PendingConfirmation | null>(null);
@@ -39,17 +45,16 @@ export function SqlEditor() {
 
   const active = connections.find((c) => c.id === activeConnId);
   const isProd = !!active?.isProduction;
-  const mutating = looksMutating(sql);
+  const mutating = isMutatingSql(sql);
 
   async function executeRead() {
     if (!activeConnId) {
       setStatus("Select a connection first");
       return;
     }
-    setRunning(true);
     setStatus("Running…");
     try {
-      const page = await api.runQuery({
+      const page = await runCancellableQuery({
         connId: activeConnId,
         sql,
         pageSize: 500,
@@ -60,10 +65,13 @@ export function SqlEditor() {
       setStatus(msg);
       toast({ title: "Query finished", description: msg, tone: "success" });
     } catch (e) {
+      if (isQueryCancelled(e)) {
+        setStatus("Query cancelled");
+        toast({ title: "Query cancelled" });
+        return;
+      }
       setStatus(String(e));
       toast({ title: "Query failed", description: String(e), tone: "error" });
-    } finally {
-      setRunning(false);
     }
   }
 
@@ -122,15 +130,14 @@ export function SqlEditor() {
     const id = pending.confirmationId;
     setPending(null);
     if (!approved) {
-      await api.confirmWrite(id, false);
+      await confirmCancellableWrite(id, false);
       setStatus("Write rejected");
       toast({ title: "Write rejected" });
       return;
     }
-    setRunning(true);
     setStatus(isProd ? "Running approved production write…" : "Running…");
     try {
-      const page = await api.confirmWrite(id, true);
+      const page = await confirmCancellableWrite(id, true);
       if (page) {
         setResult(page);
         openArtifact("results");
@@ -142,14 +149,17 @@ export function SqlEditor() {
         toast({ title: "Write applied", tone: "success" });
       }
     } catch (e) {
+      if (isQueryCancelled(e)) {
+        setStatus("Query cancelled");
+        toast({ title: "Query cancelled" });
+        return;
+      }
       setStatus(String(e));
       toast({
         title: "Write failed",
         description: String(e),
         tone: "error",
       });
-    } finally {
-      setRunning(false);
     }
   }
 
@@ -199,11 +209,11 @@ export function SqlEditor() {
           )}
         </span>
         <div className="flex shrink-0 items-center gap-0.5">
-          {running && result?.queryId && (
+          {running && activeQueryId && (
             <Button
               size="xs"
               variant="ghost"
-              onClick={() => void api.cancelQuery(result.queryId)}
+              onClick={() => void cancelActiveQuery()}
             >
               <Square className="size-3.5" />
               Cancel
@@ -272,18 +282,4 @@ export function SqlEditor() {
       />
     </div>
   );
-}
-
-function looksMutating(sql: string): boolean {
-  const first = sql.trim().split(/\s+/)[0]?.toUpperCase() ?? "";
-  return ![
-    "SELECT",
-    "WITH",
-    "SHOW",
-    "EXPLAIN",
-    "DESCRIBE",
-    "DESC",
-    "PRAGMA",
-    "VALUES",
-  ].includes(first);
 }

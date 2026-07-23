@@ -390,6 +390,7 @@ impl ConnectionManager {
         &self,
         confirmation_id: Uuid,
         approved: bool,
+        query_id: Option<Uuid>,
     ) -> AppResult<Option<QueryPage>> {
         let pending = self
             .pending_writes
@@ -406,6 +407,7 @@ impl ConnectionManager {
                 conn_id: pending.conn_id,
                 sql: pending.sql,
                 page_size: 500,
+                query_id,
             })
             .await?,
         ))
@@ -506,7 +508,7 @@ impl ConnectionManager {
     }
 
     async fn execute_query(&self, req: RunQueryRequest) -> AppResult<QueryPage> {
-        let query_id = Uuid::new_v4();
+        let query_id = req.query_id.unwrap_or_else(Uuid::new_v4);
         let token = CancellationToken::new();
         self.cancel_tokens.write().insert(query_id, token.clone());
 
@@ -518,14 +520,16 @@ impl ConnectionManager {
         let started = Instant::now();
 
         let result = tokio::select! {
+            biased;
             _ = token.cancelled() => {
                 self.cancel_tokens.write().remove(&query_id);
                 return Err(AppError::msg("Query cancelled"));
             }
-            res = driver.execute(&sql, max_rows) => res?,
+            res = driver.execute(&sql, max_rows) => res,
         };
 
         self.cancel_tokens.write().remove(&query_id);
+        let result = result?;
         let duration_ms = started.elapsed().as_millis() as u64;
         let total_rows = result.rows.len();
         let page_limit = page_size.min(total_rows.max(1));
@@ -573,6 +577,10 @@ impl ConnectionManager {
             token.cancel();
         }
         Ok(())
+    }
+
+    pub fn query_conn_id(&self, query_id: Uuid) -> Option<Uuid> {
+        self.queries.read().get(&query_id).map(|q| q.conn_id)
     }
 
     pub fn fetch_page(&self, query_id: Uuid, offset: usize, limit: usize) -> AppResult<QueryPage> {
@@ -787,6 +795,8 @@ impl ConnectionManager {
                 conn_id: info.id,
                 sql: sql.into(),
                 page_size: 50,
+                query_id: None,
+
             })
             .await?;
         }
@@ -801,6 +811,8 @@ impl ConnectionManager {
                           ORDER BY id"
                         .into(),
                     page_size: 500,
+                    query_id: None,
+
                 },
                 false,
             )

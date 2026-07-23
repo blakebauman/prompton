@@ -571,6 +571,8 @@ impl AgentRuntime {
                             conn_id,
                             sql,
                             page_size: 500,
+                            query_id: None,
+
                         },
                         false,
                     )
@@ -633,7 +635,7 @@ impl AgentRuntime {
 
         if !approved {
             // Also drop the staged write so it cannot be confirmed later.
-            let _ = db.confirm_write(confirmation_id, false).await;
+            let _ = db.confirm_write(confirmation_id, false, None).await;
             let _ = app.emit(
                 "agent:done",
                 json!({"sessionId": pending.session_id, "cancelled": true}),
@@ -642,7 +644,7 @@ impl AgentRuntime {
         }
 
         let page = db
-            .confirm_write(confirmation_id, true)
+            .confirm_write(confirmation_id, true, None)
             .await?
             .ok_or_else(|| AppError::msg("Approved write returned no result"))?;
         let _ = app.emit("query:result", &page);

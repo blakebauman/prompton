@@ -15,6 +15,10 @@ import { EmptyState } from "@/components/empty-state";
 import { ListPaneSearch } from "@/components/list-pane";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import {
+  isQueryCancelled,
+  runCancellableQuery,
+} from "@/lib/run-query";
 import { api } from "@/lib/tauri";
 import type { ColumnInfo, SchemaNode } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -48,7 +52,6 @@ export function SchemaPanel() {
     setSql,
     setStatus,
     setResult,
-    setRunning,
     addMessage,
   } = useWorkspace();
   const { open: openArtifact } = useArtifact();
@@ -180,9 +183,8 @@ export function SchemaPanel() {
         return;
       }
 
-      setRunning(true);
       setStatus(`Previewing ${table.name}…`);
-      const page = await api.runQuery({
+      const page = await runCancellableQuery({
         connId: activeConnId,
         sql: nextSql,
         pageSize: 100,
@@ -193,6 +195,11 @@ export function SchemaPanel() {
       setStatus(msg);
       toast({ title: "Preview ready", description: msg, tone: "success" });
     } catch (e) {
+      if (isQueryCancelled(e)) {
+        setStatus("Query cancelled");
+        toast({ title: "Query cancelled" });
+        return;
+      }
       setStatus(String(e));
       toast({
         title: "Couldn’t load table",
@@ -201,7 +208,6 @@ export function SchemaPanel() {
       });
     } finally {
       setBusyTable(null);
-      setRunning(false);
     }
   }
 

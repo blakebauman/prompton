@@ -38,6 +38,12 @@ import {
   parseEditedValue,
   parseSimpleSelectTarget,
 } from "@/lib/sql-edit";
+import {
+  cancelActiveQuery,
+  confirmCancellableWrite,
+  isQueryCancelled,
+  runCancellableQuery,
+} from "@/lib/run-query";
 import { api } from "@/lib/tauri";
 import type {
   PendingConfirmation,
@@ -66,7 +72,7 @@ export function ResultsGrid() {
     activeConnId,
     connections,
     running,
-    setRunning,
+    activeQueryId,
   } = useWorkspace();
   const { open: openArtifact } = useArtifact();
   const parentRef = useRef<HTMLDivElement>(null);
@@ -195,18 +201,21 @@ export function ResultsGrid() {
     const sql =
       "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;";
     setSql(sql);
-    setRunning(true);
     try {
-      const page = await api.runQuery({
+      const page = await runCancellableQuery({
         connId: activeConnId,
         sql,
         pageSize: 500,
       });
       setResult(page);
       setStatus(`Done · ${page.totalRows} rows · ${page.durationMs}ms`);
-    } catch {
+    } catch (e) {
+      if (isQueryCancelled(e)) {
+        setStatus("Query cancelled");
+        return;
+      }
       try {
-        const page = await api.runQuery({
+        const page = await runCancellableQuery({
           connId: activeConnId,
           sql: "SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema') LIMIT 100;",
           pageSize: 500,
@@ -214,10 +223,12 @@ export function ResultsGrid() {
         setResult(page);
         setStatus(`Done · ${page.totalRows} rows · ${page.durationMs}ms`);
       } catch (e2) {
+        if (isQueryCancelled(e2)) {
+          setStatus("Query cancelled");
+          return;
+        }
         setStatus(String(e2));
       }
-    } finally {
-      setRunning(false);
     }
   }
 
@@ -476,15 +487,14 @@ export function ResultsGrid() {
     const edit = pendingEdit;
     setPendingWrite(null);
     if (!approved) {
-      await api.confirmWrite(id, false);
+      await confirmCancellableWrite(id, false);
       setPendingEdit(null);
       setStatus("Edit rejected");
       toast({ title: "Edit rejected" });
       return;
     }
-    setRunning(true);
     try {
-      const page = await api.confirmWrite(id, true);
+      const page = await confirmCancellableWrite(id, true);
       if (edit && result) {
         const rows = result.rows.map((r, i) =>
           i === edit.row
@@ -499,6 +509,11 @@ export function ResultsGrid() {
       setStatus(msg);
       toast({ title: "Row updated", description: msg, tone: "success" });
     } catch (e) {
+      if (isQueryCancelled(e)) {
+        setStatus("Query cancelled");
+        toast({ title: "Query cancelled" });
+        return;
+      }
       setStatus(String(e));
       toast({
         title: "Update failed",
@@ -507,7 +522,6 @@ export function ResultsGrid() {
       });
     } finally {
       setPendingEdit(null);
-      setRunning(false);
     }
   }
 
@@ -720,15 +734,11 @@ export function ResultsGrid() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          {running && result.queryId && (
+          {running && activeQueryId && (
             <Button
               size="xs"
               variant="ghost"
-              onClick={() =>
-                void api
-                  .cancelQuery(result.queryId)
-                  .catch((e) => setStatus(String(e)))
-              }
+              onClick={() => void cancelActiveQuery()}
             >
               Cancel
             </Button>

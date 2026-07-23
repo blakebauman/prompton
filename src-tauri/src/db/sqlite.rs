@@ -135,12 +135,7 @@ impl Driver for SqliteDriver {
             return Err(AppError::msg("Empty SQL"));
         }
 
-        let upper = trimmed.to_ascii_uppercase();
-        let is_select = upper.starts_with("SELECT")
-            || upper.starts_with("WITH")
-            || upper.starts_with("PRAGMA")
-            || upper.starts_with("EXPLAIN")
-            || upper.starts_with("VALUES");
+        let is_select = crate::db::types::is_row_returning_sql(trimmed);
 
         if !is_select {
             let result = sqlx::query(trimmed).execute(&self.pool).await?;

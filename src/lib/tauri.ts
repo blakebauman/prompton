@@ -83,10 +83,15 @@ export const api = {
       sql,
       sessionId: sessionId ?? null,
     }),
-  confirmWrite: (confirmationId: string, approved: boolean) =>
+  confirmWrite: (
+    confirmationId: string,
+    approved: boolean,
+    queryId?: string | null,
+  ) =>
     invoke<QueryPage | null>("confirm_write", {
       confirmationId,
       approved,
+      queryId: queryId ?? null,
     }),
   setConnectionProduction: (id: string, isProduction: boolean) =>
     invoke<ConnectionInfo>("set_connection_production", {

@@ -102,15 +102,19 @@ pub async fn confirm_write(
     state: State<'_, AppState>,
     confirmation_id: Uuid,
     approved: bool,
+    query_id: Option<Uuid>,
 ) -> AppResult<Option<QueryPage>> {
-    let page = state.db.confirm_write(confirmation_id, approved).await?;
+    let page = state
+        .db
+        .confirm_write(confirmation_id, approved, query_id)
+        .await?;
     if let Some(ref page) = page {
-        // Best-effort: resolve connection name from SQL page alone is unavailable;
-        // store query text + metrics.
+        let conn_id = state.db.query_conn_id(page.query_id);
+        let conn_name = conn_id.and_then(|id| state.db.get_config(id).map(|c| c.name.clone()));
         let _ = state.history.record_query(
             &page.sql,
-            None,
-            None,
+            conn_id,
+            conn_name,
             page.total_rows,
             page.duration_ms,
             "ok",

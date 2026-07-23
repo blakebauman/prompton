@@ -31,6 +31,8 @@ async fn sqlite_connect_and_query() {
         conn_id: info.id,
         sql: "CREATE TABLE IF NOT EXISTS t(id INTEGER)".into(),
         page_size: 10,
+        query_id: None,
+
     })
     .await
     .unwrap();
@@ -38,6 +40,8 @@ async fn sqlite_connect_and_query() {
         conn_id: info.id,
         sql: "INSERT INTO t VALUES (1),(2)".into(),
         page_size: 10,
+        query_id: None,
+
     })
     .await
     .unwrap();
@@ -47,6 +51,8 @@ async fn sqlite_connect_and_query() {
                 conn_id: info.id,
                 sql: "SELECT * FROM t".into(),
                 page_size: 10,
+                query_id: None,
+
             },
             false,
         )
@@ -83,6 +89,8 @@ async fn open_demo_sqlite_has_rows() {
                         (SELECT COUNT(*) FROM order_items) AS order_items"
                     .into(),
                 page_size: 10,
+                query_id: None,
+
             },
             false,
         )
@@ -125,6 +133,8 @@ async fn production_writes_require_hitl() {
         conn_id: info.id,
         sql: "CREATE TABLE t(id INTEGER)".into(),
         page_size: 10,
+        query_id: None,
+
     })
     .await
     .unwrap();
@@ -136,6 +146,8 @@ async fn production_writes_require_hitl() {
                 conn_id: info.id,
                 sql: "INSERT INTO t VALUES (1)".into(),
                 page_size: 10,
+                query_id: None,
+
             },
             true,
         )
@@ -148,7 +160,7 @@ async fn production_writes_require_hitl() {
     assert!(pending.is_production);
 
     let rejected = mgr
-        .confirm_write(pending.confirmation_id, false)
+        .confirm_write(pending.confirmation_id, false, None)
         .await
         .unwrap();
     assert!(rejected.is_none());
@@ -157,7 +169,7 @@ async fn production_writes_require_hitl() {
         .request_write_approval(info.id, "INSERT INTO t VALUES (7)".into(), None)
         .unwrap();
     let page = mgr
-        .confirm_write(pending2.confirmation_id, true)
+        .confirm_write(pending2.confirmation_id, true, None)
         .await
         .unwrap()
         .expect("approved write");
@@ -169,6 +181,8 @@ async fn production_writes_require_hitl() {
                 conn_id: info.id,
                 sql: "SELECT id FROM t".into(),
                 page_size: 10,
+                query_id: None,
+
             },
             false,
         )
@@ -187,7 +201,7 @@ async fn production_writes_require_hitl() {
         .request_write_approval(info.id, "INSERT INTO t VALUES (9)".into(), None)
         .unwrap();
     assert!(pending3.admin_writes_unlocked);
-    mgr.confirm_write(pending3.confirmation_id, true)
+    mgr.confirm_write(pending3.confirmation_id, true, None)
         .await
         .unwrap();
 
@@ -195,6 +209,63 @@ async fn production_writes_require_hitl() {
     let demoted = mgr.set_production(info.id, false).unwrap();
     assert!(!demoted.is_production);
     assert!(!demoted.admin_writes_unlocked);
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[tokio::test]
+async fn cancel_inflight_query_by_client_id() {
+    let dir = std::env::temp_dir().join(format!("prompton-cancel-{}", uuid::Uuid::new_v4()));
+    let _ = std::fs::create_dir_all(&dir);
+    let db_path = dir.join("t.db");
+    let mgr = std::sync::Arc::new(ConnectionManager::new(PathBuf::from(&dir)));
+
+    let info = mgr
+        .connect(ConnectRequest {
+            name: "t".into(),
+            dialect: Dialect::Sqlite,
+            host: None,
+            port: None,
+            database: None,
+            username: None,
+            password: None,
+            file_path: Some(db_path.display().to_string()),
+            color: Some("#000".into()),
+            ssl_mode: None,
+            is_production: Some(false),
+        })
+        .await
+        .expect("connect");
+
+    let query_id = uuid::Uuid::new_v4();
+    let mgr2 = mgr.clone();
+    let handle = tokio::spawn(async move {
+        mgr2.run_query(
+            RunQueryRequest {
+                conn_id: info.id,
+                sql: "WITH RECURSIVE r(i) AS (
+                        SELECT 1
+                        UNION ALL
+                        SELECT i + 1 FROM r WHERE i < 5000000
+                      )
+                      SELECT COUNT(*) FROM r"
+                    .into(),
+                page_size: 10,
+                query_id: Some(query_id),
+            },
+            false,
+        )
+        .await
+    });
+
+    // Let the query start, then cancel by the client-supplied id.
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    mgr.cancel_query(query_id).unwrap();
+    let err = handle.await.expect("join").expect_err("should cancel");
+    assert!(
+        err.to_string().to_ascii_lowercase().contains("cancel"),
+        "unexpected error: {err}"
+    );
 
     let _ = std::fs::remove_dir_all(&dir);
 }

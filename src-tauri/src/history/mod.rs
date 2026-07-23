@@ -224,6 +224,8 @@ mod tests {
             conn_id: info.id,
             sql: "CREATE TABLE t(id INTEGER); INSERT INTO t VALUES (1),(2),(3);".into(),
             page_size: 10,
+            query_id: None,
+
         })
         .await
         .unwrap();
@@ -233,6 +235,8 @@ mod tests {
                     conn_id: info.id,
                     sql: "SELECT * FROM t".into(),
                     page_size: 10,
+                    query_id: None,
+
                 },
                 false,
             )
