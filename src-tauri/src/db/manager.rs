@@ -10,6 +10,7 @@ use uuid::Uuid;
 use crate::db::driver::{Driver, ExecResult};
 use crate::db::mysql::MysqlDriver;
 use crate::db::postgres::PostgresDriver;
+use crate::db::d1::D1Driver;
 use crate::db::sqlite::SqliteDriver;
 use crate::db::types::{
     ConnectRequest, ConnectionConfig, ConnectionInfo, Dialect, PendingWrite, QueryColumn,
@@ -118,10 +119,24 @@ impl ConnectionManager {
                 ));
             }
         }
+        if req.dialect == Dialect::D1 {
+            let account = req.host.as_deref().unwrap_or("").trim();
+            let database = req.database.as_deref().unwrap_or("").trim();
+            let token = req.password.as_deref().unwrap_or("").trim();
+            if account.is_empty() {
+                return Err(AppError::msg("Cloudflare account ID is required"));
+            }
+            if database.is_empty() {
+                return Err(AppError::msg("D1 database UUID is required"));
+            }
+            if token.is_empty() {
+                return Err(AppError::msg("Cloudflare API token is required"));
+            }
+        }
 
         let id = Uuid::new_v4();
         let is_production = req.is_production.unwrap_or(match req.dialect {
-            Dialect::Postgres | Dialect::Mysql => true,
+            Dialect::Postgres | Dialect::Mysql | Dialect::D1 => true,
             Dialect::Sqlite => false,
         });
         let config = ConnectionConfig {
@@ -161,6 +176,14 @@ impl ConnectionManager {
                 Arc::new(MysqlDriver::connect(&config, &password).await?)
             }
             Dialect::Sqlite => Arc::new(SqliteDriver::connect(&config).await?),
+            Dialect::D1 => {
+                let token = req
+                    .password
+                    .clone()
+                    .or_else(|| self.secrets.get_password(&id).ok().flatten())
+                    .unwrap_or_default();
+                Arc::new(D1Driver::connect(&config, &token).await?)
+            }
         };
 
         driver.ping().await?;
@@ -217,6 +240,10 @@ impl ConnectionManager {
                 Arc::new(MysqlDriver::connect(&config, &password).await?)
             }
             Dialect::Sqlite => Arc::new(SqliteDriver::connect(&config).await?),
+            Dialect::D1 => {
+                let token = self.secrets.get_password(&id)?.unwrap_or_default();
+                Arc::new(D1Driver::connect(&config, &token).await?)
+            }
         };
         driver.ping().await?;
         self.connections.write().insert(
@@ -997,12 +1024,18 @@ fn connection_summary(c: &ConnectionConfig) -> String {
             c.database.as_deref().unwrap_or("")
         ),
         Dialect::Sqlite => c.file_path.clone().unwrap_or_default(),
+        Dialect::D1 => format!(
+            "d1:{}/{}",
+            c.host.as_deref().unwrap_or("account"),
+            c.database.as_deref().unwrap_or("")
+        ),
     }
 }
 
 fn default_dialect_color(dialect: Dialect) -> String {
     match dialect {
         Dialect::Sqlite => "oklch(0.55 0 0)".into(),
+        Dialect::D1 => "oklch(0.58 0 0)".into(),
         Dialect::Mysql => "oklch(0.64 0 0)".into(),
         Dialect::Postgres => "oklch(0.72 0 0)".into(),
     }

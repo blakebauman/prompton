@@ -92,6 +92,10 @@ export function ConnectionsPanel() {
   const [discoverResult, setDiscoverResult] =
     useState<DiscoverLocalDatabasesResult | null>(null);
   const [discoverError, setDiscoverError] = useState<string | null>(null);
+  const [d1Listing, setD1Listing] = useState(false);
+  const [d1Databases, setD1Databases] = useState<
+    { uuid: string; name: string }[]
+  >([]);
   const [query, setQuery] = useState("");
   const [dialect, setDialect] = useState<Dialect>("sqlite");
   const [isProduction, setIsProduction] = useState(false);
@@ -106,10 +110,22 @@ export function ConnectionsPanel() {
   });
 
   useEffect(() => {
-    setIsProduction(dialect === "postgres" || dialect === "mysql");
+    setIsProduction(
+      dialect === "postgres" || dialect === "mysql" || dialect === "d1",
+    );
+    setD1Databases([]);
     setForm((f) => {
       if (dialect === "sqlite") {
         return { ...f, name: "Local SQLite" };
+      }
+      if (dialect === "d1") {
+        return {
+          ...f,
+          name: "Cloudflare D1",
+          host: "",
+          database: "",
+          password: "",
+        };
       }
       if (dialect === "mysql") {
         return {
@@ -218,6 +234,36 @@ export function ConnectionsPanel() {
     }
   }
 
+  async function listD1() {
+    setD1Listing(true);
+    try {
+      const list = await api.listD1Databases(form.host.trim(), form.password);
+      setD1Databases(list);
+      if (list.length === 1 && !form.database) {
+        setForm((f) => ({
+          ...f,
+          database: list[0].uuid,
+          name: f.name === "Cloudflare D1" ? list[0].name : f.name,
+        }));
+      }
+      toast({
+        title: "D1 databases",
+        description:
+          list.length === 0
+            ? "No databases on this account"
+            : `${list.length} database${list.length === 1 ? "" : "s"} found`,
+      });
+    } catch (e) {
+      toast({
+        title: "List failed",
+        description: String(e),
+        tone: "error",
+      });
+    } finally {
+      setD1Listing(false);
+    }
+  }
+
   async function onConnect() {
     const request: ConnectRequest =
       dialect === "sqlite"
@@ -231,35 +277,48 @@ export function ConnectionsPanel() {
             }),
             isProduction,
           }
-        : dialect === "mysql"
+        : dialect === "d1"
           ? {
-              name: form.name || "MySQL",
-              dialect: "mysql",
-              host: form.host,
-              port: Number(form.port) || 3306,
-              database: form.database,
-              username: form.username,
+              name: form.name || "Cloudflare D1",
+              dialect: "d1",
+              host: form.host.trim(),
+              database: form.database.trim(),
               password: form.password,
               color: connectionIdentityColor({
-                dialect: "mysql",
+                dialect: "d1",
                 isProduction,
               }),
               isProduction,
             }
-          : {
-              name: form.name || "PostgreSQL",
-              dialect: "postgres",
-              host: form.host,
-              port: Number(form.port) || 5432,
-              database: form.database,
-              username: form.username,
-              password: form.password,
-              color: connectionIdentityColor({
-                dialect: "postgres",
+          : dialect === "mysql"
+            ? {
+                name: form.name || "MySQL",
+                dialect: "mysql",
+                host: form.host,
+                port: Number(form.port) || 3306,
+                database: form.database,
+                username: form.username,
+                password: form.password,
+                color: connectionIdentityColor({
+                  dialect: "mysql",
+                  isProduction,
+                }),
                 isProduction,
-              }),
-              isProduction,
-            };
+              }
+            : {
+                name: form.name || "PostgreSQL",
+                dialect: "postgres",
+                host: form.host,
+                port: Number(form.port) || 5432,
+                database: form.database,
+                username: form.username,
+                password: form.password,
+                color: connectionIdentityColor({
+                  dialect: "postgres",
+                  isProduction,
+                }),
+                isProduction,
+              };
 
     try {
       const info = await api.connectDb(request);
@@ -470,7 +529,7 @@ export function ConnectionsPanel() {
               dashed
               className="min-h-36 p-3"
               title="No connections"
-              description="Add Postgres, MySQL, or SQLite, scan for recent local SQLite files, or open a seeded demo."
+              description="Add Postgres, MySQL, SQLite, or Cloudflare D1; scan for local SQLite files; or open a seeded demo."
               actions={
                 <>
                   <Button size="xs" onClick={() => setOpen(true)}>
@@ -899,6 +958,10 @@ export function ConnectionsPanel() {
                     <DialectIcon dialect="sqlite" />
                     SQLite
                   </SelectItem>
+                  <SelectItem value="d1">
+                    <DialectIcon dialect="d1" />
+                    Cloudflare D1
+                  </SelectItem>
                   <SelectItem value="postgres">
                     <DialectIcon dialect="postgres" />
                     PostgreSQL
@@ -930,6 +993,98 @@ export function ConnectionsPanel() {
                   }
                 />
               </div>
+            ) : dialect === "d1" ? (
+              <>
+                <div className="grid gap-1">
+                  <Label className="text-[11px] text-muted-foreground">
+                    Account ID
+                  </Label>
+                  <Input
+                    placeholder="Cloudflare account ID"
+                    value={form.host}
+                    onChange={(e) =>
+                      setForm({ ...form, host: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <Label className="text-[11px] text-muted-foreground">
+                    API token
+                  </Label>
+                  <Input
+                    type="password"
+                    placeholder="D1 Read / D1 Write token"
+                    value={form.password}
+                    onChange={(e) =>
+                      setForm({ ...form, password: e.target.value })
+                    }
+                  />
+                  <p className="text-[11px] text-muted-foreground text-pretty">
+                    Token stays in the OS keyring. Needs D1 Read (and D1 Write
+                    for mutations). SQLite SQL works as usual.
+                  </p>
+                </div>
+                <div className="flex items-end gap-2">
+                  <div className="grid min-w-0 flex-1 gap-1">
+                    <Label className="text-[11px] text-muted-foreground">
+                      Database UUID
+                    </Label>
+                    <Input
+                      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                      value={form.database}
+                      onChange={(e) =>
+                        setForm({ ...form, database: e.target.value })
+                      }
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="outline"
+                    disabled={
+                      d1Listing || !form.host.trim() || !form.password.trim()
+                    }
+                    onClick={() => void listD1()}
+                  >
+                    {d1Listing ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : null}
+                    List
+                  </Button>
+                </div>
+                {d1Databases.length > 0 && (
+                  <div className="grid gap-1">
+                    <Label className="text-[11px] text-muted-foreground">
+                      Pick database
+                    </Label>
+                    <Select
+                      value={form.database || undefined}
+                      onValueChange={(uuid) => {
+                        const hit = d1Databases.find((d) => d.uuid === uuid);
+                        setForm((f) => ({
+                          ...f,
+                          database: uuid,
+                          name:
+                            f.name === "Cloudflare D1" && hit
+                              ? hit.name
+                              : f.name,
+                        }));
+                      }}
+                    >
+                      <SelectTrigger size="sm" className="w-full">
+                        <SelectValue placeholder="Select a D1 database" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {d1Databases.map((db) => (
+                          <SelectItem key={db.uuid} value={db.uuid}>
+                            {db.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </>
             ) : (
               <>
                 <div className="grid grid-cols-3 gap-2">
@@ -1000,8 +1155,10 @@ export function ConnectionsPanel() {
                   Production database
                 </Label>
                 <p className="text-[11px] leading-snug text-muted-foreground text-pretty">
-                  {dialect === "postgres" || dialect === "mysql"
-                    ? "Network databases default to production: read-only until HITL or admin unlock."
+                  {dialect === "postgres" ||
+                  dialect === "mysql" ||
+                  dialect === "d1"
+                    ? "Remote databases default to production: read-only until HITL or admin unlock."
                     : "Read-only for the agent until HITL approval or an admin unlocks writes."}
                 </p>
               </div>

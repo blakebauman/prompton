@@ -13,7 +13,7 @@ Detailed guides live under [`docs/`](./docs/README.md):
 
 ## MVP features
 
-- Multi-connection workspace (PostgreSQL, MySQL, SQLite)
+- Multi-connection workspace (PostgreSQL, MySQL, SQLite, Cloudflare D1)
 - Discover recent local SQLite databases on disk (home + mounted volumes)
 - Activity rail: Workspace · History · Library · Settings
 - Conversational agent (Prompton) with tool calling in Rust

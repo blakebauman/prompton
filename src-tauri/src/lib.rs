@@ -80,6 +80,7 @@ pub fn run() {
             commands::open_demo_sqlite,
             commands::app_data_dir,
             commands::discover_local_databases,
+            commands::list_d1_databases,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Prompton");

@@ -20,6 +20,7 @@ Implementation: `src-tauri/src/db/` — `manager.rs`, dialect modules (`postgres
 | PostgreSQL | `postgres.rs` | Host/port/db/user + SSL mode; password from keyring |
 | MySQL | `mysql.rs` | Host/port/db/user; password from keyring |
 | SQLite | `sqlite.rs` | Filesystem path; demo DB under app data |
+| Cloudflare D1 | `d1.rs` | Account ID (`host`) + database UUID (`database`) + API token (keyring); SQLite SQL via Cloudflare REST query API |
 
 Host / `sslmode` validation lives in the connect path (reject obviously bad values early).
 
