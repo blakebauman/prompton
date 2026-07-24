@@ -29,6 +29,28 @@ export interface ConnectRequest {
   isProduction?: boolean;
 }
 
+export interface DiscoverLocalDatabasesRequest {
+  maxAgeDays?: number;
+  maxResults?: number;
+  includeVolumes?: boolean;
+}
+
+export interface LocalDatabaseHit {
+  path: string;
+  name: string;
+  sizeBytes: number;
+  activityAt: string;
+  modifiedAt: string;
+}
+
+export interface DiscoverLocalDatabasesResult {
+  hits: LocalDatabaseHit[];
+  scannedRoots: string[];
+  visitedFiles: number;
+  truncated: boolean;
+  durationMs: number;
+}
+
 export interface SchemaNode {
   name: string;
   kind: string;

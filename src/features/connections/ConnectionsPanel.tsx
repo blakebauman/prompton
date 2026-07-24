@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  HardDrive,
+  Loader2,
   MoreHorizontal,
   Network,
   Plus,
@@ -60,7 +62,14 @@ import {
   switchActiveConnection,
 } from "@/lib/session";
 import { api, isDesktopRequiredError } from "@/lib/tauri";
-import type { ConnectRequest, ConnectionInfo, Dialect } from "@/lib/types";
+import { formatFileSize, formatWhen } from "@/lib/format";
+import type {
+  ConnectRequest,
+  ConnectionInfo,
+  Dialect,
+  DiscoverLocalDatabasesResult,
+  LocalDatabaseHit,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { loadWorkspaceSnapshot } from "@/lib/workspace-persist";
 import { useWorkspace } from "@/stores/workspace";
@@ -77,6 +86,12 @@ export function ConnectionsPanel() {
   } = useWorkspace();
   const { open: openArtifact } = useArtifact();
   const [open, setOpen] = useState(false);
+  const [discoverOpen, setDiscoverOpen] = useState(false);
+  const [discovering, setDiscovering] = useState(false);
+  const [discoverDays, setDiscoverDays] = useState("30");
+  const [discoverResult, setDiscoverResult] =
+    useState<DiscoverLocalDatabasesResult | null>(null);
+  const [discoverError, setDiscoverError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [dialect, setDialect] = useState<Dialect>("sqlite");
   const [isProduction, setIsProduction] = useState(false);
@@ -293,6 +308,98 @@ export function ConnectionsPanel() {
     }
   }
 
+  async function runDiscover() {
+    setDiscovering(true);
+    setDiscoverError(null);
+    try {
+      const days = Number(discoverDays) || 30;
+      const result = await api.discoverLocalDatabases({
+        maxAgeDays: days,
+        maxResults: 40,
+        includeVolumes: true,
+      });
+      setDiscoverResult(result);
+      if (result.hits.length === 0) {
+        setStatus("No recent local SQLite databases found");
+      } else {
+        setStatus(
+          `Found ${result.hits.length} local database${result.hits.length === 1 ? "" : "s"}`,
+        );
+      }
+    } catch (e) {
+      if (isDesktopRequiredError(e)) {
+        setDiscoverError("Desktop app required for disk scan.");
+      } else {
+        setDiscoverError(String(e));
+      }
+      setDiscoverResult(null);
+    } finally {
+      setDiscovering(false);
+    }
+  }
+
+  function openDiscover() {
+    setDiscoverOpen(true);
+    setDiscoverError(null);
+    if (!discoverResult && !discovering) {
+      void runDiscover();
+    }
+  }
+
+  async function connectDiscovered(hit: LocalDatabaseHit) {
+    const existing = connections.find(
+      (c) =>
+        c.dialect === "sqlite" &&
+        (c.summary === hit.path || c.summary.endsWith(hit.path)),
+    );
+    if (existing) {
+      setDiscoverOpen(false);
+      await selectConnection(existing.id);
+      openArtifact("schema");
+      toast({
+        title: "Already saved",
+        description: existing.name,
+      });
+      return;
+    }
+    try {
+      const info = await api.connectDb({
+        name: hit.name || "SQLite",
+        dialect: "sqlite",
+        filePath: hit.path,
+        color: connectionIdentityColor({
+          dialect: "sqlite",
+          isProduction: false,
+        }),
+        isProduction: false,
+      });
+      await refresh();
+      setDiscoverOpen(false);
+      await selectConnection(info.id);
+      openArtifact("schema");
+      toast({
+        title: "Connected",
+        description: info.name,
+        tone: "success",
+      });
+    } catch (e) {
+      setStatus(String(e));
+      toast({
+        title: "Connection failed",
+        description: String(e),
+        tone: "error",
+      });
+    }
+  }
+
+  const knownSqlitePaths = useMemo(() => {
+    const set = new Set<string>();
+    for (const c of connections) {
+      if (c.dialect === "sqlite" && c.summary) set.add(c.summary);
+    }
+    return set;
+  }, [connections]);
+
   async function updateConn(next: ConnectionInfo) {
     setConnections(connections.map((c) => (c.id === next.id ? next : c)));
   }
@@ -327,6 +434,15 @@ export function ConnectionsPanel() {
             <Button
               size="icon-xs"
               variant="ghost"
+              title="Find recent local databases"
+              aria-label="Find recent local databases"
+              onClick={() => openDiscover()}
+            >
+              <HardDrive className="size-3.5" />
+            </Button>
+            <Button
+              size="icon-xs"
+              variant="ghost"
               aria-label="Add connection"
               onClick={() => setOpen(true)}
             >
@@ -354,12 +470,20 @@ export function ConnectionsPanel() {
               dashed
               className="min-h-36 p-3"
               title="No connections"
-              description="Add Postgres, MySQL, or SQLite, or open a seeded demo to explore."
+              description="Add Postgres, MySQL, or SQLite, scan for recent local SQLite files, or open a seeded demo."
               actions={
                 <>
                   <Button size="xs" onClick={() => setOpen(true)}>
                     <Plus className="size-3.5" />
                     Add connection
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    onClick={() => openDiscover()}
+                  >
+                    <HardDrive className="size-3.5" />
+                    Find local DBs
                   </Button>
                   <Button
                     size="xs"
@@ -625,6 +749,133 @@ export function ConnectionsPanel() {
           )}
         </div>
       </ListPaneScroll>
+
+      <Dialog open={discoverOpen} onOpenChange={setDiscoverOpen}>
+        <DialogContent className="gap-3 p-4 sm:max-w-lg">
+          <DialogHeader className="gap-1">
+            <DialogTitle className="text-base">
+              Recent local databases
+            </DialogTitle>
+            <p className="text-[12px] leading-snug text-muted-foreground text-pretty">
+              Scans your home folders (and mounted volumes) for SQLite files
+              with recent activity. Verifies the SQLite header; skips caches and
+              package trees.
+            </p>
+          </DialogHeader>
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="grid min-w-28 flex-1 gap-1">
+              <Label className="text-[11px] text-muted-foreground">
+                Active within
+              </Label>
+              <Select value={discoverDays} onValueChange={setDiscoverDays}>
+                <SelectTrigger size="sm" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">7 days</SelectItem>
+                  <SelectItem value="30">30 days</SelectItem>
+                  <SelectItem value="90">90 days</SelectItem>
+                  <SelectItem value="365">1 year</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              size="xs"
+              variant="outline"
+              disabled={discovering}
+              onClick={() => void runDiscover()}
+            >
+              {discovering ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <HardDrive className="size-3.5" />
+              )}
+              {discovering ? "Scanning…" : "Scan again"}
+            </Button>
+          </div>
+
+          {discoverError && (
+            <p className="text-[12px] text-destructive">{discoverError}</p>
+          )}
+
+          <div className="max-h-72 overflow-y-auto rounded-md border border-border/60">
+            {discovering && !discoverResult ? (
+              <div className="flex items-center gap-2 px-3 py-6 text-[12px] text-muted-foreground">
+                <Loader2 className="size-3.5 animate-spin" />
+                Scanning local disks…
+              </div>
+            ) : discoverResult && discoverResult.hits.length === 0 ? (
+              <EmptyState
+                className="min-h-28 border-0 p-3"
+                title="No recent SQLite files"
+                description="Try a wider time window, or add a path manually."
+              />
+            ) : (
+              <ul className="divide-y divide-border/60">
+                {(discoverResult?.hits ?? []).map((hit) => {
+                  const already = knownSqlitePaths.has(hit.path);
+                  return (
+                    <li
+                      key={hit.path}
+                      className="flex items-start gap-2 px-2.5 py-2"
+                    >
+                      <DialectIcon
+                        dialect="sqlite"
+                        className="mt-0.5 size-3.5 shrink-0 opacity-80"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[13px] font-medium leading-snug">
+                          {hit.name}
+                        </div>
+                        <div className="truncate text-[11px] text-muted-foreground">
+                          {hit.path}
+                        </div>
+                        <div className="mt-0.5 text-[11px] text-muted-foreground">
+                          {formatWhen(hit.activityAt)}
+                          <span aria-hidden> · </span>
+                          {formatFileSize(hit.sizeBytes)}
+                          {already ? (
+                            <>
+                              <span aria-hidden> · </span>
+                              Saved
+                            </>
+                          ) : null}
+                        </div>
+                      </div>
+                      <Button
+                        size="xs"
+                        variant={already ? "ghost" : "outline"}
+                        className="shrink-0"
+                        onClick={() => void connectDiscovered(hit)}
+                      >
+                        {already ? "Open" : "Connect"}
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+
+          {discoverResult && (
+            <p className="text-[11px] text-muted-foreground">
+              {discoverResult.visitedFiles.toLocaleString()} files checked in{" "}
+              {(discoverResult.durationMs / 1000).toFixed(1)}s
+              {discoverResult.truncated ? " · scan capped" : ""}
+            </p>
+          )}
+
+          <DialogFooter>
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={() => setDiscoverOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="gap-3 p-4 sm:max-w-md">

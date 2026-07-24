@@ -20,6 +20,8 @@ Each connection has a name, dialect, status (Connected / Offline), and optional 
 | MySQL | Host, port (3306), database, username, password |
 | SQLite | File path on disk |
 
+**Find local DBs** (hard-drive icon in Connections) scans your home folders and mounted volumes for SQLite files (`.db` / `.sqlite` / …) with recent activity. Hits are verified with the SQLite header, ranked by last activity (including `-wal` sidecars), then you can **Connect** in one click.
+
 **Production** is on by default for Postgres/MySQL (off for SQLite). Production connections treat mutating SQL as requiring approval — see [Safety](./safety.md).
 
 ### Connection actions
