@@ -19,6 +19,7 @@ Each connection has a name, dialect, status (Connected / Offline), and optional 
 | PostgreSQL | Host, port (5432), database, username, password, SSL mode |
 | MySQL | Host, port (3306), database, username, password |
 | SQLite | File path on disk |
+| Cloudflare D1 | Account ID, D1 database UUID, API token (SQLite SQL over [D1’s REST API](https://developers.cloudflare.com/d1/)) |
 
 **Find local DBs** (hard-drive icon in Connections) scans your home folders and mounted volumes for SQLite files (`.db` / `.sqlite` / …) with recent activity. Hits are verified with the SQLite header, ranked by last activity (including `-wal` sidecars), then you can **Connect** in one click.
 

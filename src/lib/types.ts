@@ -1,4 +1,10 @@
-export type Dialect = "postgres" | "mysql" | "sqlite";
+export type Dialect = "postgres" | "mysql" | "sqlite" | "d1";
+
+export interface D1DatabaseInfo {
+  uuid: string;
+  name: string;
+  createdAt?: string;
+}
 
 export type ProviderKind = "openaiCompatible" | "anthropic" | "ollama";
 

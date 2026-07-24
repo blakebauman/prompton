@@ -5,6 +5,7 @@ import type {
   AgentSettings,
   BudgetReport,
   ConnectRequest,
+  D1DatabaseInfo,
   DiscoverLocalDatabasesRequest,
   DiscoverLocalDatabasesResult,
   ConnectionInfo,
@@ -197,6 +198,8 @@ export const api = {
     invoke<DiscoverLocalDatabasesResult>("discover_local_databases", {
       request: request ?? null,
     }),
+  listD1Databases: (accountId: string, apiToken: string) =>
+    invoke<D1DatabaseInfo[]>("list_d1_databases", { accountId, apiToken }),
 };
 
 export function onEvent<T>(

@@ -16,6 +16,8 @@ export function connectionIdentityColor(c: {
       return "oklch(0.64 0 0)";
     case "sqlite":
       return "oklch(0.55 0 0)";
+    case "d1":
+      return "oklch(0.58 0 0)";
   }
 }
 

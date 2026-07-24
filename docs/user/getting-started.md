@@ -2,7 +2,7 @@
 
 Prompton is a native desktop database client. You talk to your data in natural language **or** write SQL directly. The assistant (Prompton) is the hub; Results, SQL, Schema, and related views live in the artifact pane.
 
-**Dialects:** PostgreSQL, MySQL, SQLite  
+**Dialects:** PostgreSQL, MySQL, SQLite, Cloudflare D1  
 **Platforms:** macOS and Linux (Windows packaging deferred)  
 **Privacy default:** credentials stay in the OS keyring; query data stays on your machine unless you point a remote LLM at a provider you control.
 

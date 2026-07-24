@@ -9,6 +9,8 @@ pub enum Dialect {
     Postgres,
     Mysql,
     Sqlite,
+    /// Cloudflare D1 — SQLite semantics over the Cloudflare REST API.
+    D1,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

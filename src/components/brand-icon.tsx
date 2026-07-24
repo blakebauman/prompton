@@ -1,4 +1,11 @@
-import { siAnthropic, siMysql, siOllama, siPostgresql, siSqlite } from "simple-icons";
+import {
+  siAnthropic,
+  siCloudflare,
+  siMysql,
+  siOllama,
+  siPostgresql,
+  siSqlite,
+} from "simple-icons";
 
 import { cn } from "@/lib/utils";
 import type { Dialect, ProviderKind } from "@/lib/types";
@@ -35,6 +42,8 @@ export function dialectLabel(dialect: Dialect): string {
       return "MySQL";
     case "sqlite":
       return "SQLite";
+    case "d1":
+      return "Cloudflare D1";
   }
 }
 
@@ -63,6 +72,14 @@ export function DialectIcon({
         <BrandIcon
           title={siSqlite.title}
           path={siSqlite.path}
+          className={className}
+        />
+      );
+    case "d1":
+      return (
+        <BrandIcon
+          title={siCloudflare.title}
+          path={siCloudflare.path}
           className={className}
         />
       );

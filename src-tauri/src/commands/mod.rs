@@ -429,6 +429,14 @@ pub async fn discover_local_databases(
         .map_err(|e| crate::error::AppError::msg(format!("Discover task failed: {e}")))?
 }
 
+#[tauri::command]
+pub async fn list_d1_databases(
+    account_id: String,
+    api_token: String,
+) -> AppResult<Vec<crate::db::d1::D1DatabaseInfo>> {
+    crate::db::d1::list_databases(&account_id, &api_token).await
+}
+
 // silence unused import warning for PendingConfirmation in some builds
 #[allow(dead_code)]
 fn _pending_type(_: PendingConfirmation) {}

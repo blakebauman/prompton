@@ -1,3 +1,4 @@
+pub mod d1;
 pub mod driver;
 pub mod manager;
 pub mod mysql;

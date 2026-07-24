@@ -39,6 +39,7 @@ export function sqlLiteral(value: unknown, dialect: Dialect): string {
     if (dialect === "postgres" || dialect === "mysql") {
       return value ? "TRUE" : "FALSE";
     }
+    // SQLite + D1
     return value ? "1" : "0";
   }
   const s = typeof value === "string" ? value : JSON.stringify(value);
@@ -55,7 +56,7 @@ export function buildUpdateSql(opts: {
   pkValues: unknown[];
 }): string {
   const tableRef =
-    opts.dialect === "sqlite" &&
+    (opts.dialect === "sqlite" || opts.dialect === "d1") &&
     (opts.schema === "main" || opts.schema === "")
       ? quoteIdent(opts.table, opts.dialect)
       : `${quoteIdent(opts.schema, opts.dialect)}.${quoteIdent(opts.table, opts.dialect)}`;
