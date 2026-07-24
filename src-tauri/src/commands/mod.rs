@@ -415,6 +415,20 @@ pub fn app_data_dir(app: AppHandle) -> AppResult<String> {
     Ok(dir.display().to_string())
 }
 
+#[tauri::command]
+pub async fn discover_local_databases(
+    request: Option<crate::discover::DiscoverLocalDatabasesRequest>,
+) -> AppResult<crate::discover::DiscoverLocalDatabasesResult> {
+    let req = request.unwrap_or(crate::discover::DiscoverLocalDatabasesRequest {
+        max_age_days: None,
+        max_results: None,
+        include_volumes: None,
+    });
+    tokio::task::spawn_blocking(move || crate::discover::discover_local_databases(req))
+        .await
+        .map_err(|e| crate::error::AppError::msg(format!("Discover task failed: {e}")))?
+}
+
 // silence unused import warning for PendingConfirmation in some builds
 #[allow(dead_code)]
 fn _pending_type(_: PendingConfirmation) {}

@@ -5,6 +5,8 @@ import type {
   AgentSettings,
   BudgetReport,
   ConnectRequest,
+  DiscoverLocalDatabasesRequest,
+  DiscoverLocalDatabasesResult,
   ConnectionInfo,
   HistoryEntry,
   HistoryListFilter,
@@ -191,6 +193,10 @@ export const api = {
   appDataDir: () => invoke<string>("app_data_dir"),
   openDemoSqlite: () =>
     invoke<[ConnectionInfo, QueryPage]>("open_demo_sqlite"),
+  discoverLocalDatabases: (request?: DiscoverLocalDatabasesRequest) =>
+    invoke<DiscoverLocalDatabasesResult>("discover_local_databases", {
+      request: request ?? null,
+    }),
 };
 
 export function onEvent<T>(
